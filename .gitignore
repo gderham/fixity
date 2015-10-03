@@ -1,0 +1,14 @@
+*.swp
+
+*.suo
+*.user
+
+Debug/
+Release/
+.vs/
+
+artifacts/
+build/
+lib/
+packages/
+
