@@ -12,9 +12,14 @@
     public static class FIXUtilities
     {
         public const char FixDelimiter = '\x01';
-        
+
+        public const string BodyLengthTag = "10";
+
         //TODO: Check which chars FIX accepts
         private static Regex _fixFieldPattern = new Regex("([A-Za-z0-9]{1,2})=([A-Za-z0-9_ \\.]+)");
+
+        private static Regex _fixFieldPattern2 = new Regex("([A-Za-z0-9]{1,2})=([A-Za-z0-9_ \\.]+)\x01");
+
 
         public static string SetFIXDelimiter(string message)
         {
@@ -72,6 +77,37 @@
             }
 
             return dict;
+        }
+
+        /// <summary>
+        /// Analyse some text for FIX messages contained in it.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        public static FixMessageInfo ParseFixMessagesFromText(string text)
+        {
+            var wholeMessages = new List<string>();
+            string remainingText = null;
+
+            //TODO: Replace this logic with a regex (?)
+            int indexOfMessageStart = 0;
+            int indexOfMessageEnd = 0;
+            foreach (Match match in _fixFieldPattern2.Matches(text)) //TODO: Check the matches are guaranteed to be ordered
+            {
+                if (match.Value.StartsWith("10="))
+                {
+                    indexOfMessageEnd = match.Index + match.Length;
+                    wholeMessages.Add(text.Substring(indexOfMessageStart, indexOfMessageEnd-indexOfMessageStart));
+                    indexOfMessageStart = indexOfMessageEnd;
+                }
+            }
+
+            if(indexOfMessageEnd < text.Length)
+            {
+                remainingText = text.Substring(indexOfMessageEnd);
+            }
+            
+            return new FixMessageInfo(wholeMessages, remainingText);
         }
 
     }
