@@ -35,12 +35,12 @@
         public FIXUtilitiesTests()
         {
             //TODO: Set the BodyLength (9) correctly
-            _logonString1WithoutChecksum = "8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|";
+            _logonString1WithoutChecksum = "8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|108=30|";
 
             _logonMessage1 =
-                FIXUtilities.SetFIXDelimiter("8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|10=22|");
+                FIXUtilities.SetFIXDelimiter("8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|108=30|10=80|");
             _logonMessage1WithoutChecksum =
-                FIXUtilities.SetFIXDelimiter("8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|");
+                FIXUtilities.SetFIXDelimiter("8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|108=30|");
 
             _partialMessage = FIXUtilities.SetFIXDelimiter("8=FIXT1.1|9=10");
         }
@@ -66,13 +66,14 @@
         {   
             var expected = new Dictionary<string, string>()
             {
-                {"8","FIXT1.1"},
-                {"9","100"},
-                {"35","A"},
-                {"49","SomeClient"},
-                {"56","SomeFacility"},
-                {"34","1"},
-                {"10","22"}
+                {"8",  "FIXT1.1"},
+                {"9",  "100"},
+                {"35", "A"},
+                {"49", "SomeClient"},
+                {"56", "SomeFacility"},
+                {"34", "1"},
+                {"108","30"},
+                {"10", "80"}
             };
 
             Dictionary<string, string> result = FIXUtilities.ParseFixMessage(_logonMessage1);

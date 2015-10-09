@@ -16,9 +16,7 @@
         public const string BodyLengthTag = "10";
 
         //TODO: Check which chars FIX accepts
-        private static Regex _fixFieldPattern = new Regex("([A-Za-z0-9]{1,2})=([A-Za-z0-9_ \\.]+)");
-
-        private static Regex _fixFieldPattern2 = new Regex("([A-Za-z0-9]{1,2})=([A-Za-z0-9_ \\.]+)\x01");
+        private static Regex _fixFieldPattern2 = new Regex("(\\d{1,3})=([A-Za-z0-9_ \\.]+)\x01");
 
 
         public static string SetFIXDelimiter(string message)
@@ -66,7 +64,7 @@
         /// <returns>A dictionary of the MessageType->Text pairs.</returns>
         public static Dictionary<string,string> ParseFixMessage(string message)
         {
-            var matches = _fixFieldPattern.Matches(message);
+            var matches = _fixFieldPattern2.Matches(message);
 
             var dict = new Dictionary<string,string>();
             foreach (Match match in matches)
