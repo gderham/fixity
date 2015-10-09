@@ -11,7 +11,6 @@
     using log4net;
 
     using Core;
-    using System.Threading;
 
     class FixServerActor : ReceiveActor
     {
@@ -277,14 +276,21 @@
 
                 if (DateTime.UtcNow - _lastHeartbeatArrivalTime > _heartbeatInterval + _heartbeatInterval)
                 {
-                    Become(ConnectionLost);
+                    _log.Debug("Client connection lost.");
+                    Become(ShuttingDown);
                 }
 
             });
 
+            Receive<Shutdown>(message =>
+            {
+                _log.Debug("Shutting down.");
+                LogoffAndShutdown();
+            });
+
             ReceiveMessages();
 
-            // Start sending heartbeat messages to the clietn
+            // Start sending heartbeat messages to the client
             _heartbeatCanceller = new Cancelable(Context.System.Scheduler);
             Context.System.Scheduler.ScheduleTellRepeatedly(_heartbeatInterval,
                 _heartbeatInterval, Self, new SendHeartbeat(), ActorRefs.Nobody,
@@ -297,9 +303,17 @@
                 _adminCanceller);
         }
 
-        public void ConnectionLost()
+        public void LogoffAndShutdown()
         {
-            _log.Debug("Client connection lost. Shutting down.");
+            //TODO: Send a logoff message to client
+
+            Become(ShuttingDown);
+        }
+       
+        public void ShuttingDown()
+        {
+            _log.Debug("Shutting down.");
+
             _heartbeatCanceller.Cancel();
             _adminCanceller.Cancel();
             
