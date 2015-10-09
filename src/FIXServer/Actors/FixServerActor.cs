@@ -1,5 +1,6 @@
 ﻿namespace Fixity.FIXServer.Actors
 {
+    using System;
     using System.Net;
     using System.Net.Sockets;
     using System.Text;
@@ -10,7 +11,7 @@
     using log4net;
 
     using Core;
-    using System;
+    using System.Threading;
 
     class FixServerActor : ReceiveActor
     {
@@ -61,6 +62,12 @@
 
         private class SendHeartbeat { }
 
+        /// <summary>
+        /// An instruction to perform admin functions e.g. checking
+        /// the connection is still alive.
+        /// </summary>
+        private class PerformAdmin { }
+
         #endregion
 
         private readonly IPAddress _localhost = IPAddress.Parse("127.0.0.1");
@@ -76,6 +83,16 @@
         private TimeSpan _heartbeatInterval;
 
         private ICancelable _heartbeatCanceller;
+
+        private DateTime _lastHeartbeatArrivalTime;
+
+        /// <summary>
+        /// The interval for admin functions e.g. checking a heartbeat message 
+        /// has been received from the client in the last interval.
+        /// </summary>
+        private TimeSpan _adminInterval = TimeSpan.FromSeconds(1); // Must be < _heartbeatInterval
+
+        private ICancelable _adminCanceller;
 
         /// <summary>
         /// The sequence number of the last message received from the client.
@@ -147,6 +164,14 @@
 
                 stream.ReadAsync(buffer, 0, bufferSize).ContinueWith(task =>
                 {
+                    if (task.Status == TaskStatus.Faulted)
+                    {
+                        // This happens if the socket is closed server side.
+
+                        return null; // Create a message type to indicate stream read fault? Yes otherwise it goes to unhandled.
+                    }
+                    
+
                     int bytesReceived = task.Result;
                     // Note here we start with the previously received partial message.
                     var text = message.Message + Encoding.ASCII.GetString(buffer, 0, bytesReceived);
@@ -213,12 +238,24 @@
             _log.Debug("Client is logged on.");
 
             _outboundSequenceNumber = 0;
-            
+            _lastHeartbeatArrivalTime = DateTime.UtcNow; // Reset this
+
             //TODO: Improve by receiving messages typed by FIX message type.
             Receive<SingleFixMessage>(message =>
             {
                 // if heartbeat... etc
                 _log.Debug("Received messsage: " + message.Message);
+
+                Dictionary<string, string> fixFields = FIXUtilities.ParseFixMessage(message.Message);
+
+                if (fixFields["35"] == "0") // Heartbeat message
+                {
+                    _lastHeartbeatArrivalTime = DateTime.UtcNow;
+                    // If this is split into multiple actors running on different
+                    // machines this may not work so well. Does the Akka.NET system
+                    // supply a system time?
+                    // In any case the datetime getter should be injected.
+                }
 
                 Self.Tell(new WaitForNextMessage());
             });
@@ -232,6 +269,19 @@
                 stream.WriteAsync(buffer, 0, buffer.Length);
             });
 
+            Receive<PerformAdmin>(message =>
+            {
+                // Check a heartbeat was received in the last 2 * heartbeat interval,
+                // otherwise assume connection is lost and shut down.
+                // This is the only method employed to check the connection.
+
+                if (DateTime.UtcNow - _lastHeartbeatArrivalTime > _heartbeatInterval + _heartbeatInterval)
+                {
+                    Become(ConnectionLost);
+                }
+
+            });
+
             ReceiveMessages();
 
             // Start sending heartbeat messages to the clietn
@@ -239,7 +289,23 @@
             Context.System.Scheduler.ScheduleTellRepeatedly(_heartbeatInterval,
                 _heartbeatInterval, Self, new SendHeartbeat(), ActorRefs.Nobody,
                 _heartbeatCanceller);
+
+            // We check for returned heartbeats in an admin function
+            _adminCanceller = new Cancelable(Context.System.Scheduler);
+            Context.System.Scheduler.ScheduleTellRepeatedly(_adminInterval,
+                _adminInterval, Self, new PerformAdmin(), ActorRefs.Nobody,
+                _adminCanceller);
+        }
+
+        public void ConnectionLost()
+        {
+            _log.Debug("Client connection lost. Shutting down.");
+            _heartbeatCanceller.Cancel();
+            _adminCanceller.Cancel();
             
+            _tcpClient.GetStream().Close();
+            _tcpClient.Close();
+            _tcpListener.Stop();
         }
 
         #endregion
