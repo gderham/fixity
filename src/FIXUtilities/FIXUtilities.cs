@@ -108,5 +108,12 @@
             return new FixMessageInfo(wholeMessages, remainingText);
         }
 
+        public static string CreateHeartbeatMessage(int sequenceNumber)
+        {
+            string message = String.Format("8=FIXT1.1|9=100|35=0|49=SomeClient|56=SomeFacility|34={0}|",
+                sequenceNumber);
+            return CreateFixMessage(message);
+        }
+
     }
 }

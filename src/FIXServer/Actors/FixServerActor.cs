@@ -4,19 +4,18 @@
     using System.Net.Sockets;
     using System.Text;
     using System.Threading.Tasks;
+    using System.Collections.Generic;
 
     using Akka.Actor;
     using log4net;
 
     using Core;
-    using Akka.Event;
+    using System;
 
     class FixServerActor : ReceiveActor
     {
         private static readonly ILog _log = LogManager.GetLogger(typeof(FixServerActor));
-
-        private readonly ILoggingAdapter _akkaLog = Logging.GetLogger(Context);
-
+        
         #region Messages
 
         public class StartListening { }
@@ -60,6 +59,8 @@
             public string Message { get; private set; }
         }
 
+        private class SendHeartbeat { }
+
         #endregion
 
         private readonly IPAddress _localhost = IPAddress.Parse("127.0.0.1");
@@ -67,6 +68,24 @@
 
         private TcpListener _tcpListener;
         private TcpClient _tcpClient;
+
+        /// <summary>
+        /// The interval between heartbeat messages sent to the client.
+        /// This is negotiated in the received Logon message.
+        /// </summary>
+        private TimeSpan _heartbeatInterval;
+
+        private ICancelable _heartbeatCanceller;
+
+        /// <summary>
+        /// The sequence number of the last message received from the client.
+        /// </summary>
+        private int _inboundSequenceNumber;
+
+        /// <summary>
+        /// The sequence number of the last message sent to the client.
+        /// </summary>
+        private int _outboundSequenceNumber;
 
         /// <param name="serverAddress">The port this server should listen
         /// to for clients.</param>
@@ -165,10 +184,16 @@
 
             Receive<SingleFixMessage>(message =>
             {
+                Dictionary<string,string> fixFields = FIXUtilities.ParseFixMessage(message.Message);
+                
                 // To connect, a client must send a Logon (A) message
                 //TODO: Check this is a valid logon message (or heartbeat?) then Become(LoggedOn)
-                if (message.Message.Contains("35=A")) //TODO: parse properly
+                if (fixFields["35"] == "A")
                 {
+                    //TODO: Move this into a FIXMessage class
+                    _heartbeatInterval = TimeSpan.FromSeconds(int.Parse(fixFields["108"]));
+                    _inboundSequenceNumber = int.Parse(fixFields["34"]);
+                    
                     Become(LoggedOn);
                     Self.Tell(new WaitForNextMessage());
                 }
@@ -186,6 +211,8 @@
         public void LoggedOn()
         {
             _log.Debug("Client is logged on.");
+
+            _outboundSequenceNumber = 0;
             
             //TODO: Improve by receiving messages typed by FIX message type.
             Receive<SingleFixMessage>(message =>
@@ -196,7 +223,23 @@
                 Self.Tell(new WaitForNextMessage());
             });
 
+            Receive<SendHeartbeat>(message =>
+            {
+                string fixHeartbeatMessage = FIXUtilities.CreateHeartbeatMessage(_outboundSequenceNumber++);
+                byte[] buffer = Encoding.ASCII.GetBytes(fixHeartbeatMessage);
+
+                NetworkStream stream = _tcpClient.GetStream();
+                stream.WriteAsync(buffer, 0, buffer.Length);
+            });
+
             ReceiveMessages();
+
+            // Start sending heartbeat messages to the clietn
+            _heartbeatCanceller = new Cancelable(Context.System.Scheduler);
+            Context.System.Scheduler.ScheduleTellRepeatedly(_heartbeatInterval,
+                _heartbeatInterval, Self, new SendHeartbeat(), ActorRefs.Nobody,
+                _heartbeatCanceller);
+            
         }
 
         #endregion
