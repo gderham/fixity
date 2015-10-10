@@ -90,7 +90,7 @@
         [Test]
         public void ParseFixMessagesFromText_ReturnsMessage_FromTextContainingSingleMessage()
         { 
-            FixMessageInfo result = FIXUtilities.ParseFixMessagesFromText(_logonMessage1);
+            MessageInfo result = FIXUtilities.ParseFixMessagesFromText(_logonMessage1);
 
             Assert.That(result.RemainingText, Is.Null);
             Assert.That(result.CompleteMessages, Contains.Item(_logonMessage1));
@@ -101,7 +101,7 @@
         public void ParseFixMessagesFromText_ReturnsMessageAndRemainder_FromTextContainingMessageAndPartialMessage()
         {
             string text = _logonMessage1 + _partialMessage;
-            FixMessageInfo result = FIXUtilities.ParseFixMessagesFromText(text);
+            MessageInfo result = FIXUtilities.ParseFixMessagesFromText(text);
 
             Assert.That(result.RemainingText, Is.EqualTo(_partialMessage));
             Assert.That(result.CompleteMessages, Contains.Item(_logonMessage1));
@@ -112,7 +112,7 @@
         public void ParseFixMessagesFromText_ReturnsTwoMessagesAndRemainder_FromTextContainingTwoMessagesAndPartialMessage()
         {
             string text = _logonMessage1 + _logonMessage1 + _partialMessage; //TODO: Change second to a heartbeat message
-            FixMessageInfo result = FIXUtilities.ParseFixMessagesFromText(text);
+            MessageInfo result = FIXUtilities.ParseFixMessagesFromText(text);
 
             Assert.That(result.RemainingText, Is.EqualTo(_partialMessage));
             Assert.That(result.CompleteMessages, Contains.Item(_logonMessage1));

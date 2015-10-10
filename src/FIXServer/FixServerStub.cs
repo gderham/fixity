@@ -38,8 +38,6 @@
         public void Stop()
         {
             _fixServerActor.Tell(new Actors.FixServerActor.Shutdown());
-
-            //_actorSystem.AwaitTermination();
         }
         
     }

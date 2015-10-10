@@ -1,4 +1,6 @@
-﻿namespace Fixity.FIXServer
+﻿using System.Threading;
+
+namespace Fixity.FIXServer
 {
     class Program
     {
@@ -7,6 +9,10 @@
             int port = 9700;
             var server = new FixServerStub(port);
             server.Start();
+
+            //Thread.Sleep(10000);
+
+           // server.Stop();
         }
     }
 }

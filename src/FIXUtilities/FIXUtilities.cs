@@ -12,12 +12,12 @@
     public static class FIXUtilities
     {
         public const char FixDelimiter = '\x01';
+     
 
         public const string BodyLengthTag = "10";
 
         //TODO: Check which chars FIX accepts
         private static Regex _fixFieldPattern2 = new Regex("(\\d{1,3})=([A-Za-z0-9_ \\.]+)\x01");
-
 
         public static string SetFIXDelimiter(string message)
         {
@@ -50,7 +50,7 @@
         /// have a checksum, and must be terminated by a [SOH] delimiter.
         /// </summary>
         /// <param name="message">A FIX message without checksum. </param>
-        private static string AddChecksum(string message)
+        public static string AddChecksum(string message)
         {
             int checksum = Encoding.ASCII.GetBytes(message).Sum(b => b) % 256;
             
@@ -82,7 +82,7 @@
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
-        public static FixMessageInfo ParseFixMessagesFromText(string text)
+        public static MessageInfo ParseFixMessagesFromText(string text)
         {
             var wholeMessages = new List<string>();
             string remainingText = null;
@@ -105,7 +105,7 @@
                 remainingText = text.Substring(indexOfMessageEnd);
             }
             
-            return new FixMessageInfo(wholeMessages, remainingText);
+            return new MessageInfo(wholeMessages, remainingText);
         }
 
         public static string CreateHeartbeatMessage(int sequenceNumber)
@@ -114,6 +114,7 @@
                 sequenceNumber);
             return CreateFixMessage(message);
         }
+
 
     }
 }

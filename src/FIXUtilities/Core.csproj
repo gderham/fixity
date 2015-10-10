@@ -7,8 +7,8 @@
     <ProjectGuid>{AB943098-AFD3-46B5-AE2F-14AB1F011759}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>FIXUtilities</RootNamespace>
-    <AssemblyName>FIXUtilities</AssemblyName>
+    <RootNamespace>Fixity</RootNamespace>
+    <AssemblyName>Fixity.Core</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -30,6 +30,15 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Akka">
+      <HintPath>..\..\packages\Akka.1.0.4\lib\net45\Akka.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net">
+      <HintPath>..\..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -40,7 +49,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FixMessageInfo.cs" />
+    <Compile Include="Actors\FixInterpreterActor.cs" />
+    <Compile Include="Actors\TcpServerActor.cs" />
+    <Compile Include="FixMessages\BaseMessage.cs" />
+    <Compile Include="FixMessages\HeartbeatMessage.cs" />
+    <Compile Include="FixMessages\LogonMessage.cs" />
+    <Compile Include="FixParser.cs" />
+    <Compile Include="MessageInfo.cs" />
     <Compile Include="FIXUtilities.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

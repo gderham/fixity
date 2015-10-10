@@ -1,79 +1,46 @@
 ﻿namespace Fixity.FIXServer.Actors
 {
     using System;
-    using System.Net;
-    using System.Net.Sockets;
-    using System.Text;
-    using System.Threading.Tasks;
-    using System.Collections.Generic;
 
     using Akka.Actor;
     using log4net;
 
     using Core;
+    using Core.Actors;
+    using Fixity.Actors;
+    using FixMessages;
 
-    class FixServerActor : ReceiveActor
+    /// <summary>
+    /// A FIX Server.
+    /// Uses a TcpServer actor to communicate with FIX clients, with
+    /// FIX message parsing performed by a FixInterpreter actor.
+    /// </summary>
+    public class FixServerActor : ReceiveActor
     {
         private static readonly ILog _log = LogManager.GetLogger(typeof(FixServerActor));
         
-        #region Messages
+        #region Incoming messages
 
         public class StartListening { }
 
         public class Shutdown { }
 
-        public class ClientConnected { }
+        #endregion
 
-        public class ReceivedText
-        {
-            //TODO: Improve naming
-            public ReceivedText(FixMessageInfo messageInfo)
-            {
-                MessageInfo = messageInfo;
-            }
-
-            public FixMessageInfo MessageInfo { get; private set; }
-        }
-
-        private class SingleFixMessage
-        {
-            public SingleFixMessage(string message)
-            {
-                Message = message;
-            }
-            public string Message;
-        }
-
-        private class WaitForNextMessage
-        {
-            /// <param name="partialMessage">If the socket has already received
-            /// part of a message.</param>
-            public WaitForNextMessage(string partialMessage)
-            {
-                Message = partialMessage;
-            }
-
-            public WaitForNextMessage()
-            {
-            }
-            public string Message { get; private set; }
-        }
+        #region Internal messages
 
         private class SendHeartbeat { }
 
         /// <summary>
-        /// An instruction to perform admin functions e.g. checking
-        /// the connection is still alive.
+        /// An instruction to perform regular admin functions
+        /// e.g. checking the connection is still alive.
         /// </summary>
         private class PerformAdmin { }
 
         #endregion
 
-        private readonly IPAddress _localhost = IPAddress.Parse("127.0.0.1");
-        private readonly int _port;
-
-        private TcpListener _tcpListener;
-        private TcpClient _tcpClient;
+        private readonly string _serverCompID = "FIXTEST";
+        private string _clientCompID;
 
         /// <summary>
         /// The interval between heartbeat messages sent to the client.
@@ -103,226 +70,188 @@
         /// </summary>
         private int _outboundSequenceNumber;
 
+        private IActorRef _tcpServerActor;
+
+        /// <summary>
+        /// We can communicate with the FIX client using typed FIX messages
+        /// via this actor.
+        /// </summary>
+        private IActorRef _fixInterpreterActor;
+
         /// <param name="serverAddress">The port this server should listen
         /// to for clients.</param>
         public FixServerActor(int port)
         {
-            _port = port;
+            // Self    <->    TcpServer
+            //   \             /
+            //    FixInterpreter
+
+            var fixInterpreterProps = Props.Create(() => new FixInterpreterActor(Self));
+            _fixInterpreterActor = Context.ActorOf(fixInterpreterProps);
+
+            var tcpServerProps = Props.Create(() => new TcpServerActor(port,
+                _fixInterpreterActor, FIXUtilities.ParseFixMessagesFromText));
+            _tcpServerActor = Context.ActorOf(tcpServerProps);
+
+            //TODO: Is this sensible? Perhaps the TCPServer should add itself to the interpreter.
+            _fixInterpreterActor.Tell(new FixInterpreterActor.AddClient(_tcpServerActor));
+                        
             Ready();
         }
 
-        protected override void PreStart()
+        /// <summary>
+        /// Set up a scheduled repeated message sent to Self.
+        /// </summary>
+        private Cancelable ScheduleRepeatedMessage(TimeSpan interval, object message)
         {
-            _tcpListener = new TcpListener(new IPEndPoint(_localhost, _port));
+            var canceller = new Cancelable(Context.System.Scheduler);
+            Context.System.Scheduler.ScheduleTellRepeatedly(interval, interval,
+                Self, message, ActorRefs.Nobody, canceller);
+            return canceller;
         }
 
         #region States
 
         /// <summary>
-        /// Not listening for client connections.
-        /// Waiting for a StartListening message.
+        /// Waiting for a StartListening instruction to listen for clients.
         /// </summary>
         public void Ready()
         {
             Receive<StartListening>(message =>
             {
-                Become(ListeningForClient);
+                BecomeWaitingForClient();
             });
         }
 
-        public void ListeningForClient()
+        public void WaitingForClient()
         {
-            _log.Debug("Listening for FIX clients on port " + _port.ToString());
-
-            Receive<ClientConnected>(message =>
+            Receive<TcpServerActor.ClientConnected>(message =>
             {
-                Become(Connected);
-            });
-
-            _tcpListener.Start();
-
-            _tcpListener.AcceptTcpClientAsync().ContinueWith(task =>
-            {
-                _tcpClient = task.Result;
-                return new ClientConnected();
-            },
-            TaskContinuationOptions.AttachedToParent &
-            TaskContinuationOptions.ExecuteSynchronously)
-            .PipeTo(Self);
-        }
-
-        public void ReceiveMessages()
-        {
-            Receive<WaitForNextMessage>(message =>
-            {
-                NetworkStream stream = _tcpClient.GetStream();
-
-                // Read from stream until we have a full message
-                int bufferSize = 500; // this doesn't restrict the message size
-                var buffer = new byte[bufferSize];
-
-                stream.ReadAsync(buffer, 0, bufferSize).ContinueWith(task =>
-                {
-                    if (task.Status == TaskStatus.Faulted)
-                    {
-                        // This happens if the socket is closed server side.
-
-                        return null; // Create a message type to indicate stream read fault? Yes otherwise it goes to unhandled.
-                    }
-                    
-
-                    int bytesReceived = task.Result;
-                    // Note here we start with the previously received partial message.
-                    var text = message.Message + Encoding.ASCII.GetString(buffer, 0, bytesReceived);
-
-                    FixMessageInfo messageInfo = FIXUtilities.ParseFixMessagesFromText(text);
-                    //TODO: Just return the text and process in the handler
-                    return new ReceivedText(messageInfo);
-                },
-                TaskContinuationOptions.AttachedToParent &
-                TaskContinuationOptions.ExecuteSynchronously)
-                .PipeTo(Self);
-            });
-
-            Receive<ReceivedText>(message =>
-            {
-                // We received some bytes which contains (possibly multiple) FIX messages.
-                foreach (string msg in message.MessageInfo.CompleteMessages)
-                {
-                    Self.Tell(new SingleFixMessage(msg));
-                }
-
-                // And possibly also received a partial message at the end,
-                // in which case we keep it to prefix the subsequently
-                // received data.
-                if (message.MessageInfo.RemainingText != null)
-                {
-                    Self.Tell(new WaitForNextMessage(message.MessageInfo.RemainingText));
-                }
+                BecomeConnected();
             });
         }
 
         public void Connected()
         {
-            _log.Debug("Connected to FIX client.");
-
-            Receive<SingleFixMessage>(message =>
+            // Messages from client
+            Receive<LogonMessage>(message =>
             {
-                Dictionary<string,string> fixFields = FIXUtilities.ParseFixMessage(message.Message);
-                
-                // To connect, a client must send a Logon (A) message
-                //TODO: Check this is a valid logon message (or heartbeat?) then Become(LoggedOn)
-                if (fixFields["35"] == "A")
-                {
-                    //TODO: Move this into a FIXMessage class
-                    _heartbeatInterval = TimeSpan.FromSeconds(int.Parse(fixFields["108"]));
-                    _inboundSequenceNumber = int.Parse(fixFields["34"]);
-                    
-                    Become(LoggedOn);
-                    Self.Tell(new WaitForNextMessage());
-                }
-                else // TODO: else if heartbeat (ok)
-                {
-                    // else error and disconnect
-                }
+                _clientCompID = message.SenderCompID;
+                _heartbeatInterval = message.HeartBeatInterval;
+                _inboundSequenceNumber = message.MessageSequenceNumber;
+                //TODO: Check sequence number on received messages is as expected.
+                BecomeLoggedOn();
             });
 
-            ReceiveMessages(); //TODO: Split out into a separate TCP -> FIX message actor
+            Receive<HeartbeatMessage>(message =>
+            {
+                _lastHeartbeatArrivalTime = DateTime.UtcNow; //TODO: The server could timestamp messages as they arrive to avoid checking the time here?
+                _inboundSequenceNumber = message.MessageSequenceNumber;
+            });
 
-            Self.Tell(new WaitForNextMessage());
+            // Exogenous system message
+            Receive<Shutdown>(message =>
+            {
+                _log.Debug("Shutting down.");
+                BecomeShutdown();
+            });
         }
 
         public void LoggedOn()
         {
-            _log.Debug("Client is logged on.");
-
-            _outboundSequenceNumber = 0;
-            _lastHeartbeatArrivalTime = DateTime.UtcNow; // Reset this
-
-            //TODO: Improve by receiving messages typed by FIX message type.
-            Receive<SingleFixMessage>(message =>
+            // Messages from client
+            Receive<HeartbeatMessage>(message =>
             {
-                // if heartbeat... etc
-                _log.Debug("Received messsage: " + message.Message);
-
-                Dictionary<string, string> fixFields = FIXUtilities.ParseFixMessage(message.Message);
-
-                if (fixFields["35"] == "0") // Heartbeat message
-                {
-                    _lastHeartbeatArrivalTime = DateTime.UtcNow;
-                    // If this is split into multiple actors running on different
-                    // machines this may not work so well. Does the Akka.NET system
-                    // supply a system time?
-                    // In any case the datetime getter should be injected.
-                }
-
-                Self.Tell(new WaitForNextMessage());
+                _lastHeartbeatArrivalTime = DateTime.UtcNow; //TODO: The server could timestamp messages as they arrive to avoid checking the time here?
+                _inboundSequenceNumber = message.MessageSequenceNumber;
             });
 
+            // Exogenous system message
+            Receive<Shutdown>(message =>
+            {
+                _log.Debug("Shutting down.");
+                BecomeShutdown();
+            });
+
+            // Internal messages
             Receive<SendHeartbeat>(message =>
             {
-                string fixHeartbeatMessage = FIXUtilities.CreateHeartbeatMessage(_outboundSequenceNumber++);
-                byte[] buffer = Encoding.ASCII.GetBytes(fixHeartbeatMessage);
-
-                NetworkStream stream = _tcpClient.GetStream();
-                stream.WriteAsync(buffer, 0, buffer.Length);
+                _log.Debug("Sending heartbeat message.");
+                var heartbeatMessage = new HeartbeatMessage(_serverCompID, _clientCompID,
+                    _outboundSequenceNumber++);
+                _fixInterpreterActor.Tell(heartbeatMessage);
             });
-
+            
             Receive<PerformAdmin>(message =>
             {
                 // Check a heartbeat was received in the last 2 * heartbeat interval,
                 // otherwise assume connection is lost and shut down.
                 // This is the only method employed to check the connection.
-
                 if (DateTime.UtcNow - _lastHeartbeatArrivalTime > _heartbeatInterval + _heartbeatInterval)
                 {
                     _log.Debug("Client connection lost.");
-                    Become(ShuttingDown);
+                    BecomeShutdown();
                 }
-
             });
-
-            Receive<Shutdown>(message =>
-            {
-                _log.Debug("Shutting down.");
-                LogoffAndShutdown();
-            });
-
-            ReceiveMessages();
-
-            // Start sending heartbeat messages to the client
-            _heartbeatCanceller = new Cancelable(Context.System.Scheduler);
-            Context.System.Scheduler.ScheduleTellRepeatedly(_heartbeatInterval,
-                _heartbeatInterval, Self, new SendHeartbeat(), ActorRefs.Nobody,
-                _heartbeatCanceller);
-
-            // We check for returned heartbeats in an admin function
-            _adminCanceller = new Cancelable(Context.System.Scheduler);
-            Context.System.Scheduler.ScheduleTellRepeatedly(_adminInterval,
-                _adminInterval, Self, new PerformAdmin(), ActorRefs.Nobody,
-                _adminCanceller);
         }
-
-        public void LogoffAndShutdown()
-        {
-            //TODO: Send a logoff message to client
-
-            Become(ShuttingDown);
-        }
-       
+     
         public void ShuttingDown()
         {
-            _log.Debug("Shutting down.");
-
-            _heartbeatCanceller.Cancel();
-            _adminCanceller.Cancel();
-            
-            _tcpClient.GetStream().Close();
-            _tcpClient.Close();
-            _tcpListener.Stop();
+            //TODO: Wait for shutdown confirmation from TcpServer then go to Ready state.
         }
 
         #endregion
 
+        #region Transitions
+
+        public void BecomeWaitingForClient()
+        {
+            Become(WaitingForClient);
+            _tcpServerActor.Tell(new TcpServerActor.StartListening());
+        }
+
+        public void BecomeConnected()
+        {
+            _log.Debug("Connected to client.");
+            Become(Connected);
+            _tcpServerActor.Tell(new TcpServerActor.AcceptMessages());
+        }
+
+        public void BecomeLoggedOn()
+        {
+            _log.Debug("Client is logged on.");
+
+            _outboundSequenceNumber = 0;
+            _lastHeartbeatArrivalTime = DateTime.UtcNow;
+
+            Become(LoggedOn);
+
+            // We confirm logon by replying to the client.
+            var response = new LogonMessage(_serverCompID, _clientCompID, _outboundSequenceNumber++,
+                _heartbeatInterval);
+            _fixInterpreterActor.Tell(response);
+
+            // Start sending heartbeat messages to the client
+            _heartbeatCanceller = ScheduleRepeatedMessage(_heartbeatInterval, new SendHeartbeat());
+
+            // And check for returned heartbeats in an admin function
+            _adminCanceller = ScheduleRepeatedMessage(_adminInterval, new PerformAdmin());
+        }
+
+        public void BecomeShutdown()
+        {
+            _log.Debug("Shutting down.");
+
+            //TODO: Send a logoff message to client
+            Become(ShuttingDown);
+
+            _heartbeatCanceller.Cancel();
+            _adminCanceller.Cancel();
+
+            // Tell tcp server to shut down.
+            _tcpServerActor.Tell(new TcpServerActor.Shutdown());
+        }
+
+        #endregion
     }
 }
