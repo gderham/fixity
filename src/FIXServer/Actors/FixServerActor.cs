@@ -78,24 +78,21 @@
         /// </summary>
         private IActorRef _fixInterpreterActor;
 
-        /// <param name="serverAddress">The port this server should listen
-        /// to for clients.</param>
-        public FixServerActor(int port)
+        public FixServerActor(Func<IActorRefFactory, IActorRef> tcpServerCreator,
+            Func<IActorRefFactory, IActorRef> fixInterpreterCreator)
         {
             // Self    <->    TcpServer
             //   \             /
             //    FixInterpreter
 
-            var fixInterpreterProps = Props.Create(() => new FixInterpreterActor(Self));
-            _fixInterpreterActor = Context.ActorOf(fixInterpreterProps);
+            _tcpServerActor = tcpServerCreator(Context);
+            _fixInterpreterActor = fixInterpreterCreator(Context);
 
-            var tcpServerProps = Props.Create(() => new TcpServerActor(port,
-                _fixInterpreterActor, FIXUtilities.ParseFixMessagesFromText));
-            _tcpServerActor = Context.ActorOf(tcpServerProps);
+            _fixInterpreterActor.Tell(new FixInterpreterActor.SetServer(Self));
+            _fixInterpreterActor.Tell(new FixInterpreterActor.SetClient(_tcpServerActor));
+            
+            _tcpServerActor.Tell(new TcpServerActor.Subscribe(_fixInterpreterActor));
 
-            //TODO: Is this sensible? Perhaps the TCPServer should add itself to the interpreter.
-            _fixInterpreterActor.Tell(new FixInterpreterActor.AddClient(_tcpServerActor));
-                        
             Ready();
         }
 

@@ -14,9 +14,18 @@
     {
         #region Incoming messages
 
-        public class AddClient
+        public class SetClient
         {
-            public AddClient(IActorRef actor)
+            public SetClient(IActorRef actor)
+            {
+                Actor = actor;
+            }
+            public IActorRef Actor { get; private set; }
+        }
+
+        public class SetServer
+        {
+            public SetServer(IActorRef actor)
             {
                 Actor = actor;
             }
@@ -26,21 +35,26 @@
         #endregion
 
         private static readonly ILog _log = LogManager.GetLogger(typeof(FixInterpreterActor));
+
         private IActorRef _client;
         private IActorRef _server;
         private FixParser _parser = new FixParser();
 
-        public FixInterpreterActor(IActorRef server)
+        public FixInterpreterActor()
         {
-            _server = server;
             Processing();
         }
 
         public void Processing()
         {
-            Receive<AddClient>(message => //TODO: Do something better
+            Receive<SetClient>(message => //TODO: Do something better
             {
                 _client = message.Actor;
+            });
+
+            Receive<SetServer>(message =>
+            {
+                _server = message.Actor;
             });
             
             // Messages from the client to the server

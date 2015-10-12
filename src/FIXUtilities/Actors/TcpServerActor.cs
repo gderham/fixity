@@ -44,6 +44,16 @@
             public string Text { get; private set; }
         }
 
+        public class Subscribe
+        {
+            public Subscribe(IActorRef actor)
+            {
+                Actor = actor;
+            }
+
+            public IActorRef Actor { get; private set; }
+        }
+
         public class Shutdown { }
 
         #endregion
@@ -123,14 +133,14 @@
         /// <summary>
         /// Creates a TCP server that will listen to the specified port
         /// on localhost when it is told to StartListening.
+        /// Sends admin messages to parent, sends received TCP messages
+        /// to the listener.
         /// </summary>
         /// <param name="messageSplitter">A function that can parse complete
         /// messages from some text, return those and the remaining text.</param>
-        public TcpServerActor(int port, IActorRef listener,
-            Func<string, MessageInfo> messageSplitter)
+        public TcpServerActor(int port, Func<string, MessageInfo> messageSplitter)
         {
             _port = port;
-            _listener = listener;
             _messageSplitter = messageSplitter;
             Ready();
         }
@@ -146,6 +156,11 @@
             Receive<StartListening>(message =>
             {
                 BecomeListeningForClient();
+            });
+
+            Receive<Subscribe>(message => //TODO: This should be available in any state.
+            {
+                _listener = message.Actor;
             });
         }
 

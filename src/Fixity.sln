@@ -11,7 +11,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FIXServer", "FIXServer\FIXS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "FIXUtilities\Core.csproj", "{AB943098-AFD3-46B5-AE2F-14AB1F011759}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{E8F2E4C2-01E1-4DBB-8C93-C9437E643B48}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UnitTests", "UnitTests", "{ED1E3A72-2716-4CDC-ACDA-C2C66FA616DC}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreTests", "..\tests\unittests\CoreTests\CoreTests.csproj", "{E879506B-7B4D-4F30-A2E5-3C33BAB50D3F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FIXServerTests", "..\tests\unittests\FIXServerTests\FIXServerTests.csproj", "{B48DEF09-0F61-4F4E-ACC4-F714B3C9869F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,8 +41,17 @@ Global
 		{E879506B-7B4D-4F30-A2E5-3C33BAB50D3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E879506B-7B4D-4F30-A2E5-3C33BAB50D3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E879506B-7B4D-4F30-A2E5-3C33BAB50D3F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B48DEF09-0F61-4F4E-ACC4-F714B3C9869F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B48DEF09-0F61-4F4E-ACC4-F714B3C9869F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B48DEF09-0F61-4F4E-ACC4-F714B3C9869F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B48DEF09-0F61-4F4E-ACC4-F714B3C9869F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{ED1E3A72-2716-4CDC-ACDA-C2C66FA616DC} = {E8F2E4C2-01E1-4DBB-8C93-C9437E643B48}
+		{E879506B-7B4D-4F30-A2E5-3C33BAB50D3F} = {ED1E3A72-2716-4CDC-ACDA-C2C66FA616DC}
+		{B48DEF09-0F61-4F4E-ACC4-F714B3C9869F} = {ED1E3A72-2716-4CDC-ACDA-C2C66FA616DC}
 	EndGlobalSection
 EndGlobal

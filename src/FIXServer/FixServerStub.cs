@@ -1,6 +1,11 @@
 ﻿namespace Fixity.FIXServer
 {
+    using System;
+
     using Akka.Actor;
+    using Core.Actors;
+    using Core;
+    using Fixity.Actors;
 
     /// <summary>
     /// An ersatz FIX server for use in testing.
@@ -15,9 +20,20 @@
         public FixServerStub(int port)
         {
             _actorSystem = ActorSystem.Create("FIXServer");
+
             
-            var fixServerProps = Props.Create(() => new Actors.FixServerActor(port));
-            _fixServerActor = _actorSystem.ActorOf(fixServerProps);
+            var tcpServerProps = Props.Create(() => new TcpServerActor(port,
+                FIXUtilities.ParseFixMessagesFromText));
+            Func<IActorRefFactory, IActorRef> tcpServerCreator =
+                (context) => context.ActorOf(tcpServerProps, "TcpServer");
+
+            var fixInterpreterProps = Props.Create(() => new FixInterpreterActor());
+            Func<IActorRefFactory, IActorRef> fixInterpreterCreator =
+                (context) => context.ActorOf(fixInterpreterProps, "FixInterpreter");
+
+            var fixServerProps = Props.Create(() => new Actors.FixServerActor(tcpServerCreator,
+                fixInterpreterCreator));
+            _fixServerActor = _actorSystem.ActorOf(fixServerProps, "FixServer");
             
             //actorSystem.AwaitTermination();
 
