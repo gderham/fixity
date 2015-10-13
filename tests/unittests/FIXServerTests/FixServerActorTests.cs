@@ -11,7 +11,7 @@
     using Core.Actors;
     using FIXServer.Actors;
     using FixMessages;
-
+    using System.Collections.Generic;
 
     [TestFixture]
     public class FixServerActorTests : TestKit
@@ -25,13 +25,21 @@
         [SetUp]
         public void SetUp()
         {
+            // Some invented FX spot rates
+            var prices = new Dictionary<string, double>()
+            {
+                { "USDGBP", 0.65575 },
+                { "USDJPY", 119.75 }
+            };
+
             _tcpServerActor = CreateTestProbe("TcpServer");
             Func<IActorRefFactory, IActorRef> tcpServerCreator = (_) => _tcpServerActor;
 
             _fixInterpreterActor = CreateTestProbe("FixInterpreter");
             Func<IActorRefFactory, IActorRef> fixInterpreterCreator = (_) => _fixInterpreterActor;
 
-            var fixServerProps = Props.Create(() => new FixServerActor(tcpServerCreator, fixInterpreterCreator));
+            var fixServerProps = Props.Create(() => new FixServerActor(tcpServerCreator,
+                fixInterpreterCreator, prices));
             _fixServerActor = ActorOf(fixServerProps, "FixServer");
         }
 
@@ -95,6 +103,36 @@
             // the server shuts down.
             _tcpServerActor.ExpectMsg<TcpServerActor.Shutdown>(shutdownWait);
             //TODO: Verify the server logs an abnormal shutdown message
+        }
+
+        [Test]
+        public void FixServer_ReturnsQuote_ForClientsQuoteRequest()
+        {
+            var heartbeatInterval = TimeSpan.FromMilliseconds(20);
+
+            // Ignore wiring-up type messages
+            _tcpServerActor.IgnoreMessages((message) => message is TcpServerActor.Subscribe);
+            _fixInterpreterActor.IgnoreMessages((message) => message is FixInterpreterActor.SetServer
+                || message is FixInterpreterActor.SetClient || message is HeartbeatMessage);
+
+            // Test:
+            // 1. Initial client connection
+            _fixServerActor.Tell(new FixServerActor.StartListening());
+            _tcpServerActor.ExpectMsg<TcpServerActor.StartListening>();
+            _tcpServerActor.Send(_fixServerActor, new TcpServerActor.ClientConnected());
+            _tcpServerActor.ExpectMsg<TcpServerActor.AcceptMessages>();
+            // 2. The FixServer receives a logon message from the client via the FixInterpreter
+            _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, heartbeatInterval));
+
+            // 3. The FixServer replies with a logon message
+            _fixInterpreterActor.ExpectMsgFrom<LogonMessage>(_fixServerActor);
+
+            // 4. Client requests quote
+            _fixInterpreterActor.Send(_fixServerActor, new QuoteRequest("A", "B", 1, "Quote1", "USDJPY"));
+
+            // 5. FixServer returns the corresponding quote
+            _fixInterpreterActor.ExpectMsg<Quote>(message => message.QuoteReqID == "Quote1");
+       
         }
 
         // Tests

@@ -1,6 +1,7 @@
 ﻿namespace Fixity.FIXServer
 {
     using System;
+    using System.Collections.Generic;
 
     using Akka.Actor;
     using Core.Actors;
@@ -21,7 +22,13 @@
         {
             _actorSystem = ActorSystem.Create("FIXServer");
 
-            
+            // Some invented FX spot rates
+            var prices = new Dictionary<string, double>()
+            {
+                { "USDGBP", 0.65575 },
+                { "USDJPY", 119.75 }
+            };
+
             var tcpServerProps = Props.Create(() => new TcpServerActor(port,
                 FIXUtilities.ParseFixMessagesFromText));
             Func<IActorRefFactory, IActorRef> tcpServerCreator =
@@ -32,7 +39,7 @@
                 (context) => context.ActorOf(fixInterpreterProps, "FixInterpreter");
 
             var fixServerProps = Props.Create(() => new Actors.FixServerActor(tcpServerCreator,
-                fixInterpreterCreator));
+                fixInterpreterCreator, prices));
             _fixServerActor = _actorSystem.ActorOf(fixServerProps, "FixServer");
             
             //actorSystem.AwaitTermination();

@@ -17,6 +17,8 @@
         private const string HEARTBEAT_MESSAGE = "0";
         private const string LOGON_MESSAGE = "A";
         private const string LOGOUT_MESSAGE = "5";
+        private const string QUOTEREQUEST_MESSAGE = "R";
+        private const string QUOTE_MESSAGE = "S";
         // Field names
         private const string BEGINSTRING_FIELD = "8";
         private const string BODYLENGTH_FIELD = "9";
@@ -25,6 +27,11 @@
         private const string TARGETCOMPID_FIELD = "56";
         private const string MSGSEQNUM_FIELD = "34";
         private const string HEARTBTINT_FIELD = "108";
+        private const string QUOTEREQID_FIELD = "131";
+        private const string QUOTEID_FIELD = "117";
+        private const string NORELATEDSYM_FIELD = "644";
+        private const string SYMBOL_FIELD = "55";
+        private const string OFFERPX_FIELD = "133";
         // Constant field values
         private const string BEGINSTRING = "FIXT1.1";
 
@@ -57,11 +64,20 @@
 
                     return new LogonMessage(senderCompID, targetCompID, messageSequenceNumber,
                          heartbeatInterval);
-                 }
+                }
 
                 case LOGOUT_MESSAGE:
                 {
-                     return new LogoutMessage(senderCompID, targetCompID, messageSequenceNumber);
+                    return new LogoutMessage(senderCompID, targetCompID, messageSequenceNumber);
+                }
+
+                case QUOTEREQUEST_MESSAGE:
+                {
+                    string quoteReqID = fixFields[QUOTEREQID_FIELD];
+                    string symbol = fixFields[SYMBOL_FIELD];
+
+                    return new QuoteRequest(senderCompID, targetCompID, messageSequenceNumber,
+                        quoteReqID, symbol);
                 }
 
                 default:
@@ -97,6 +113,13 @@
             else if (message is LogoutMessage)
             {
                 // No additional fields to add.
+            }
+            else if (message is Quote)
+            {
+                var msg = (Quote)message;
+                fixFields[QUOTEREQID_FIELD] = msg.QuoteReqID;
+                fixFields[QUOTEID_FIELD] = msg.QuoteID;
+                fixFields[SYMBOL_FIELD] = msg.Symbol;
             }
             else
             {

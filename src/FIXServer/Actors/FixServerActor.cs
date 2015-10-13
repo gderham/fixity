@@ -8,6 +8,7 @@
     using Core.Actors;
     using Fixity.Actors;
     using FixMessages;
+    using System.Collections.Generic;
 
     /// <summary>
     /// A FIX Server.
@@ -72,11 +73,21 @@
         /// The sequence number of the last message received from the client.
         /// </summary>
         private int _inboundSequenceNumber;
+        //TODO: For each message received from the client, check the
+        // sequence number is one more than than the last.
+        // If this is not the case remove Fix client messages
+        // from the mailbox and send a Resend Request (2) to the client
+        // for all missed messages.
 
         /// <summary>
         /// The sequence number of the last message sent to the client.
         /// </summary>
         private int _outboundSequenceNumber;
+
+        /// <summary>
+        /// A set of FX Spot rates to be used for quotes.
+        /// </summary>
+        private Dictionary<string, double> _fxSpotOfferRates;
 
         private IActorRef _tcpServerActor;
 
@@ -87,8 +98,11 @@
         private IActorRef _fixInterpreterActor;
 
         public FixServerActor(Func<IActorRefFactory, IActorRef> tcpServerCreator,
-            Func<IActorRefFactory, IActorRef> fixInterpreterCreator)
+            Func<IActorRefFactory, IActorRef> fixInterpreterCreator,
+            Dictionary<string,double> prices)
         {
+            _fxSpotOfferRates = prices; //TODO: Update from a message rather than passing in.
+
             _tcpServerActor = tcpServerCreator(Context);
             _fixInterpreterActor = fixInterpreterCreator(Context);
 
@@ -173,6 +187,27 @@
                 _inboundSequenceNumber = message.MessageSequenceNumber;
                 _fixInterpreterActor.Tell(new LogoutMessage(_serverCompID, _clientCompID, _outboundSequenceNumber++));
                 BecomeShutDown();
+            });
+
+            Receive<QuoteRequest>(message =>
+            {
+                if (_fxSpotOfferRates.ContainsKey(message.Symbol))
+                {
+                    _log.Debug("Responding to RFQ for " + message.Symbol);
+
+                    string quoteID = "Quote" + _outboundSequenceNumber;
+
+                    var quote = new Quote(_serverCompID, _clientCompID,
+                        _outboundSequenceNumber++, message.QuoteReqID, quoteID,
+                        message.Symbol, _fxSpotOfferRates[message.Symbol]);
+
+                    _fixInterpreterActor.Tell(quote);
+                }
+                else
+                {
+                    // Reply - unable to quote
+                    //TODO: Implement
+                }
             });
 
             // Exogenous system messages
