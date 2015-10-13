@@ -3,6 +3,7 @@
     using System;
 
     using Akka.Actor;
+    using Akka.TestKit;
     using Akka.TestKit.NUnit;
     using NUnit.Framework;
 
@@ -16,45 +17,53 @@
     {
         // These tests could be DRYer if the actors used the FSM base class.
 
+        private IActorRef _fixServerActor;
+        private TestProbe _tcpServerActor;
+        private TestProbe _fixInterpreterActor;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _tcpServerActor = CreateTestProbe("TcpServer");
+            Func<IActorRefFactory, IActorRef> tcpServerCreator = (_) => _tcpServerActor;
+
+            _fixInterpreterActor = CreateTestProbe("FixInterpreter");
+            Func<IActorRefFactory, IActorRef> fixInterpreterCreator = (_) => _fixInterpreterActor;
+
+            var fixServerProps = Props.Create(() => new FixServerActor(tcpServerCreator, fixInterpreterCreator));
+            _fixServerActor = ActorOf(fixServerProps, "FixServer");
+        }
+
         [Test]
         public void FixServer_ServerLogsOutSuccessfully_AfterClientConnectAndLogon()
         { 
-            // Set up
-            var tcpServerActor = CreateTestProbe("TcpServer");
-            Func<IActorRefFactory, IActorRef> tcpServerCreator = (_) => tcpServerActor;
-            var fixInterpreterActor = CreateTestProbe("FixInterpreter");
-            Func<IActorRefFactory, IActorRef> fixInterpreterCreator = (_) => fixInterpreterActor;
-
-            var fixServerProps = Props.Create(() => new FixServerActor(tcpServerCreator, fixInterpreterCreator));
-            var fixServerActor = ActorOf(fixServerProps, "FixServer");
-
             var heartbeatInterval = TimeSpan.FromMilliseconds(20);
 
             // Ignore wiring-up type messages
             //  Each time IgnoreMessages is called it replaces the previous ignores for that test actor.
-            tcpServerActor.IgnoreMessages((message) => message is TcpServerActor.Subscribe);
-            fixInterpreterActor.IgnoreMessages((message) => message is FixInterpreterActor.SetServer
+            _tcpServerActor.IgnoreMessages((message) => message is TcpServerActor.Subscribe);
+            _fixInterpreterActor.IgnoreMessages((message) => message is FixInterpreterActor.SetServer
                 || message is FixInterpreterActor.SetClient);
 
             // Test:
             // 1. Initial client connection
-            fixServerActor.Tell(new FixServerActor.StartListening());
-            tcpServerActor.ExpectMsg<TcpServerActor.StartListening>();
-            tcpServerActor.Send(fixServerActor, new TcpServerActor.ClientConnected());
-            tcpServerActor.ExpectMsg<TcpServerActor.AcceptMessages>();
+            _fixServerActor.Tell(new FixServerActor.StartListening());
+            _tcpServerActor.ExpectMsg<TcpServerActor.StartListening>();
+            _tcpServerActor.Send(_fixServerActor, new TcpServerActor.ClientConnected());
+            _tcpServerActor.ExpectMsg<TcpServerActor.AcceptMessages>();
 
             // 2. The FixServer receives a logon message from the client via the FixInterpreter
-            fixInterpreterActor.Send(fixServerActor, new LogonMessage("A", "B" , 0, heartbeatInterval));
+            _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B" , 0, heartbeatInterval));
             // 3. The FixServer replies with a logon message
-            fixInterpreterActor.ExpectMsgFrom<LogonMessage>(fixServerActor);
+            _fixInterpreterActor.ExpectMsgFrom<LogonMessage>(_fixServerActor);
             // 4. and starts to send heartbeat messages to client via the FixInterpreter
-            fixInterpreterActor.ExpectMsg<HeartbeatMessage>(heartbeatInterval.Add(TimeSpan.FromMilliseconds(5)));
+            _fixInterpreterActor.ExpectMsg<HeartbeatMessage>(heartbeatInterval.Add(TimeSpan.FromMilliseconds(5)));
             // 5. FixServer shutdown causes a logout message to be sent to the client.
-            fixServerActor.Tell(new FixServerActor.Shutdown());
-            fixInterpreterActor.ExpectMsg<LogoutMessage>();
+            _fixServerActor.Tell(new FixServerActor.Shutdown());
+            _fixInterpreterActor.ExpectMsg<LogoutMessage>();
             // 6. The client confirms with a logout message
-            fixInterpreterActor.Send(fixServerActor, new LogoutMessage("A", "B", 2));
-            tcpServerActor.ExpectMsg<TcpServerActor.Shutdown>();
+            _fixInterpreterActor.Send(_fixServerActor, new LogoutMessage("A", "B", 2));
+            _tcpServerActor.ExpectMsg<TcpServerActor.Shutdown>();
         }
 
         // Tests
