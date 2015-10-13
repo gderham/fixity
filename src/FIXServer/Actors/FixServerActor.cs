@@ -36,6 +36,8 @@
         /// </summary>
         private class PerformAdmin { }
 
+        private class ClientLogoutTimedOut { }
+
         #endregion
 
         private readonly string _serverCompID = "FIXTEST";
@@ -51,6 +53,8 @@
 
         private DateTime _lastHeartbeatArrivalTime;
 
+        private readonly TimeSpan LogoutTimeout = TimeSpan.FromSeconds(1);
+
         /// <summary>
         /// The interval for admin functions e.g. checking a heartbeat message 
         /// has been received from the client in the last interval.
@@ -58,6 +62,11 @@
         private TimeSpan _adminInterval = TimeSpan.FromSeconds(1); // Must be < _heartbeatInterval
 
         private ICancelable _adminCanceller;
+
+        /// <summary>
+        /// Cancels the waiting for client logout message.
+        /// </summary>
+        private ICancelable _clientLogoutWaitCanceller;
 
         /// <summary>
         /// The sequence number of the last message received from the client.
@@ -141,7 +150,7 @@
                 _inboundSequenceNumber = message.MessageSequenceNumber;
             });
 
-            // Exogenous system message
+            // Exogenous system messages
             Receive<Shutdown>(message =>
             {
                 _log.Debug("Shutting down.");
@@ -158,7 +167,15 @@
                 _inboundSequenceNumber = message.MessageSequenceNumber;
             });
 
-            // Exogenous system message
+            Receive<LogoutMessage>(message =>
+            {
+                _log.Debug("Received Logout message from client.");
+                _inboundSequenceNumber = message.MessageSequenceNumber;
+                _fixInterpreterActor.Tell(new LogoutMessage(_serverCompID, _clientCompID, _outboundSequenceNumber++));
+                BecomeShutDown();
+            });
+
+            // Exogenous system messages
             Receive<Shutdown>(message =>
             {
                 _log.Debug("Shutting down.");
@@ -196,11 +213,16 @@
         /// </summary>
         public void WaitingForClientLogout()
         {
-            //TODO: Give up after some interval
-
             Receive<LogoutMessage>(message =>
             {
                 _log.Debug("Received Logout message from client.");
+                _clientLogoutWaitCanceller.Cancel();
+                BecomeShutDown();
+            });
+
+            Receive<ClientLogoutTimedOut>(message =>
+            {
+                _log.Debug("Timed out waiting for client Logout message");
                 BecomeShutDown();
             });
         }
@@ -257,6 +279,12 @@
         public void BecomeWaitingForClientLogout()
         {
             _log.Debug("Waiting for client logout confirmation.");
+
+            // Schedule waiting for client logout
+            _clientLogoutWaitCanceller = new Cancelable(Context.System.Scheduler);
+            Context.System.Scheduler.ScheduleTellOnce(LogoutTimeout,
+                Self, new ClientLogoutTimedOut(), ActorRefs.Nobody,
+                _clientLogoutWaitCanceller);
             
             Become(WaitingForClientLogout);
         }
