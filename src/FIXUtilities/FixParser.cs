@@ -16,6 +16,7 @@
         // Message types
         private const string HEARTBEAT_MESSAGE = "0";
         private const string LOGON_MESSAGE = "A";
+        private const string LOGOUT_MESSAGE = "5";
         // Field names
         private const string BEGINSTRING_FIELD = "8";
         private const string BODYLENGTH_FIELD = "9";
@@ -58,6 +59,11 @@
                          heartbeatInterval);
                  }
 
+                case LOGOUT_MESSAGE:
+                {
+                     return new LogoutMessage(senderCompID, targetCompID, messageSequenceNumber);
+                }
+
                 default:
                 {
                      //TODO: Throw parse exception
@@ -87,6 +93,10 @@
             {
                 var msg = (HeartbeatMessage)message;
                 fixFields[MESSAGETYPE_FIELD] = HEARTBEAT_MESSAGE;
+            }
+            else if (message is LogoutMessage)
+            {
+                // No additional fields to add.
             }
             else
             {

@@ -57,25 +57,34 @@
                 _server = message.Actor;
             });
             
-            // Messages from the client to the server
+            // Text messages from the client to the server
             Receive<TcpServerActor.ReceivedMessage>(message =>
             {
                 _server.Tell(_parser.ParseMessage(message.Text));
             });
 
-            // Messages from the server to the client
+            // Typed messages from the server to the client
             Receive<LogonMessage>(message =>
             {
-                string fixMessage = _parser.CreateMessage(message);
-                _client.Tell(new TcpServerActor.SendMessage(fixMessage));
+                ConvertAndSendMessage(message);
             });
 
             Receive<HeartbeatMessage>(message =>
             {
-                string fixMessage = _parser.CreateMessage(message);
-                _client.Tell(new TcpServerActor.SendMessage(fixMessage));
+                ConvertAndSendMessage(message);
             });
 
+            Receive<LogoutMessage>(message =>
+            {
+                ConvertAndSendMessage(message);
+            });
+
+        }
+
+        private void ConvertAndSendMessage(BaseMessage message)
+        {
+            string fixMessage = _parser.CreateMessage(message);
+            _client.Tell(new TcpServerActor.SendMessage(fixMessage));
         }
     }
 }

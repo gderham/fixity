@@ -54,6 +54,7 @@
     <Compile Include="FixMessages\BaseMessage.cs" />
     <Compile Include="FixMessages\HeartbeatMessage.cs" />
     <Compile Include="FixMessages\LogonMessage.cs" />
+    <Compile Include="FixMessages\LogoutMessage.cs" />
     <Compile Include="FixParser.cs" />
     <Compile Include="MessageInfo.cs" />
     <Compile Include="FIXUtilities.cs" />

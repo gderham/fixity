@@ -5,7 +5,6 @@
     using Akka.Actor;
     using log4net;
 
-    using Core;
     using Core.Actors;
     using Fixity.Actors;
     using FixMessages;
@@ -81,10 +80,6 @@
         public FixServerActor(Func<IActorRefFactory, IActorRef> tcpServerCreator,
             Func<IActorRefFactory, IActorRef> fixInterpreterCreator)
         {
-            // Self    <->    TcpServer
-            //   \             /
-            //    FixInterpreter
-
             _tcpServerActor = tcpServerCreator(Context);
             _fixInterpreterActor = fixInterpreterCreator(Context);
 
@@ -93,7 +88,7 @@
             
             _tcpServerActor.Tell(new TcpServerActor.Subscribe(_fixInterpreterActor));
 
-            Ready();
+            BecomeReady();
         }
 
         /// <summary>
@@ -150,7 +145,7 @@
             Receive<Shutdown>(message =>
             {
                 _log.Debug("Shutting down.");
-                BecomeShutdown();
+                BecomeShutDown();
             });
         }
 
@@ -167,7 +162,8 @@
             Receive<Shutdown>(message =>
             {
                 _log.Debug("Shutting down.");
-                BecomeShutdown();
+                _fixInterpreterActor.Tell(new LogoutMessage(_serverCompID, _clientCompID, _outboundSequenceNumber++));
+                BecomeWaitingForClientLogout();
             });
 
             // Internal messages
@@ -187,11 +183,28 @@
                 if (DateTime.UtcNow - _lastHeartbeatArrivalTime > _heartbeatInterval + _heartbeatInterval)
                 {
                     _log.Debug("Client connection lost.");
-                    BecomeShutdown();
+                    // TODO: A TestRequest (1) message should be sent to the
+                    // client to force a heartbeat before giving up.
+                    BecomeShutDown();
                 }
             });
         }
-     
+
+        /// <summary>
+        /// A Logout message has been sent to the client and we're waiting for
+        /// a Logout message to be reciprocated before shutting down the server.
+        /// </summary>
+        public void WaitingForClientLogout()
+        {
+            //TODO: Give up after some interval
+
+            Receive<LogoutMessage>(message =>
+            {
+                _log.Debug("Received Logout message from client.");
+                BecomeShutDown();
+            });
+        }
+
         public void ShuttingDown()
         {
             //TODO: Wait for shutdown confirmation from TcpServer then go to Ready state.
@@ -200,6 +213,12 @@
         #endregion
 
         #region Transitions
+
+        public void BecomeReady()
+        {
+            _log.Debug("Ready");
+            Become(Ready);
+        }
 
         public void BecomeWaitingForClient()
         {
@@ -235,18 +254,25 @@
             _adminCanceller = ScheduleRepeatedMessage(_adminInterval, new PerformAdmin());
         }
 
-        public void BecomeShutdown()
+        public void BecomeWaitingForClientLogout()
         {
-            _log.Debug("Shutting down.");
+            _log.Debug("Waiting for client logout confirmation.");
+            
+            Become(WaitingForClientLogout);
+        }
 
-            //TODO: Send a logoff message to client
-            Become(ShuttingDown);
+        public void BecomeShutDown()
+        {
+            _log.Debug("Shutting down server.");
+
+            _tcpServerActor.Tell(new TcpServerActor.Shutdown());
+
+            //TODO: Wait for shutdown confirmation from TcpServer.
 
             _heartbeatCanceller.Cancel();
             _adminCanceller.Cancel();
 
-            // Tell tcp server to shut down.
-            _tcpServerActor.Tell(new TcpServerActor.Shutdown());
+            BecomeReady();
         }
 
         #endregion
