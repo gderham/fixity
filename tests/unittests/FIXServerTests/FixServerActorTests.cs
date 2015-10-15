@@ -5,7 +5,7 @@
     using Akka.Actor;
     using Akka.TestKit;
     using Akka.TestKit.NUnit;
-    using NUnit.Framework;
+    using Xunit;
 
     using Actors;
     using Core.Actors;
@@ -13,17 +13,13 @@
     using FixMessages;
     using System.Collections.Generic;
 
-    [TestFixture]
     public class FixServerActorTests : TestKit
     {
-        // These tests could be DRYer if the actors used the FSM base class.
-
         private IActorRef _fixServerActor;
         private TestProbe _tcpServerActor;
         private TestProbe _fixInterpreterActor;
 
-        [SetUp]
-        public void SetUp()
+        public FixServerActorTests()
         {
             // Some invented FX spot rates
             var prices = new Dictionary<string, double>()
@@ -33,9 +29,12 @@
             };
 
             _tcpServerActor = CreateTestProbe("TcpServer");
+            _tcpServerActor.IgnoreMessages(m => m is TcpServerActor.Subscribe); // Ignore wiring-up messages
             Func<IActorRefFactory, IActorRef> tcpServerCreator = (_) => _tcpServerActor;
 
             _fixInterpreterActor = CreateTestProbe("FixInterpreter");
+            _fixInterpreterActor.IgnoreMessages(m => m is FixInterpreterActor.SetServer ||
+                m is FixInterpreterActor.SetClient); // Ignore wiring-up messages
             Func<IActorRefFactory, IActorRef> fixInterpreterCreator = (_) => _fixInterpreterActor;
 
             var fixServerProps = Props.Create(() => new FixServerActor(tcpServerCreator,
@@ -43,96 +42,88 @@
             _fixServerActor = ActorOf(fixServerProps, "FixServer");
         }
 
-        [Test]
-        public void FixServer_ServerLogsOutSuccessfully_AfterClientConnectAndLogon()
-        { 
-            var heartbeatInterval = TimeSpan.FromMilliseconds(20);
+        private void MakeClientConnection()
+        {
+            _fixServerActor.Tell(new FixServerActor.StartListening());
+            _tcpServerActor.FishForMessage<TcpServerActor.StartListening>(_=>true);
+            _tcpServerActor.Send(_fixServerActor, new TcpServerActor.ClientConnected());
+            _tcpServerActor.ExpectMsg<TcpServerActor.AcceptMessages>();
+        }
 
-            // Ignore wiring-up type messages
-            //  Each time IgnoreMessages is called it replaces the previous ignores for that test actor.
-            _tcpServerActor.IgnoreMessages((message) => message is TcpServerActor.Subscribe);
-            _fixInterpreterActor.IgnoreMessages((message) => message is FixInterpreterActor.SetServer
-                || message is FixInterpreterActor.SetClient);
+        [Fact]
+        public void FixServer_ServerLogsOutSuccessfully_AfterClientConnectAndLogon()
+        {
+            var heartbeatInterval = TimeSpan.FromMilliseconds(20);
 
             // Test:
             // 1. Initial client connection
-            _fixServerActor.Tell(new FixServerActor.StartListening());
-            _tcpServerActor.ExpectMsg<TcpServerActor.StartListening>();
-            _tcpServerActor.Send(_fixServerActor, new TcpServerActor.ClientConnected());
-            _tcpServerActor.ExpectMsg<TcpServerActor.AcceptMessages>();
+            MakeClientConnection();
 
             // 2. The FixServer receives a logon message from the client via the FixInterpreter
-            _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B" , 0, heartbeatInterval));
+            _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, heartbeatInterval));
+
             // 3. The FixServer replies with a logon message
             _fixInterpreterActor.ExpectMsgFrom<LogonMessage>(_fixServerActor);
+
             // 4. and starts to send heartbeat messages to client via the FixInterpreter
-            _fixInterpreterActor.ExpectMsg<HeartbeatMessage>(heartbeatInterval.Add(TimeSpan.FromMilliseconds(5)));
+            _fixInterpreterActor.ExpectMsg<HeartbeatMessage>(heartbeatInterval.Add(TimeSpan.FromMilliseconds(50)));
+
             // 5. FixServer shutdown causes a logout message to be sent to the client.
             _fixServerActor.Tell(new FixServerActor.Shutdown());
-            _fixInterpreterActor.ExpectMsg<LogoutMessage>();
+            _fixInterpreterActor.FishForMessage<LogoutMessage>(_=>true);
+
             // 6. The client confirms with a logout message
             _fixInterpreterActor.Send(_fixServerActor, new LogoutMessage("A", "B", 2));
-            _tcpServerActor.ExpectMsg<TcpServerActor.Shutdown>();
+            _tcpServerActor.FishForMessage<TcpServerActor.Shutdown>(_ => true);
         }
 
-        [Test]
+        [Fact]
         public void FixServer_ServerShutsDown_AfterClientFailsToRespondToLogout()
         {
             var heartbeatInterval = TimeSpan.FromMilliseconds(20);
             var shutdownWait = TimeSpan.FromMilliseconds(1100); // > logout timeout = 1s
 
-            // Ignore wiring-up type messages
-            _tcpServerActor.IgnoreMessages((message) => message is TcpServerActor.Subscribe);
-            _fixInterpreterActor.IgnoreMessages((message) => message is FixInterpreterActor.SetServer
-                || message is FixInterpreterActor.SetClient || message is HeartbeatMessage);
-
             // Test:
             // 1. Initial client connection
-            _fixServerActor.Tell(new FixServerActor.StartListening());
-            _tcpServerActor.ExpectMsg<TcpServerActor.StartListening>();
-            _tcpServerActor.Send(_fixServerActor, new TcpServerActor.ClientConnected());
-            _tcpServerActor.ExpectMsg<TcpServerActor.AcceptMessages>();
+            MakeClientConnection();
+
             // 2. The FixServer receives a logon message from the client via the FixInterpreter
             _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, heartbeatInterval));
+
             // 3. The FixServer replies with a logon message
-            _fixInterpreterActor.ExpectMsgFrom<LogonMessage>(_fixServerActor);
+            //_fixInterpreterActor.ExpectMsgFrom<LogonMessage>(_fixServerActor);
+            _fixInterpreterActor.FishForMessage<LogonMessage>(_ => true);
+            // We use FishForMessage to ignore any heartbeat messages
+
             // 4. FixServer shutdown causes a logout message to be sent to the client.
             _fixServerActor.Tell(new FixServerActor.Shutdown());
-            _fixInterpreterActor.ExpectMsg<LogoutMessage>();
+
             // 5. The client fails to confirm with a logout message and after a period
             // the server shuts down.
-            _tcpServerActor.ExpectMsg<TcpServerActor.Shutdown>(shutdownWait);
+            _tcpServerActor.FishForMessage<TcpServerActor.Shutdown>(_ => true);
+
             //TODO: Verify the server logs an abnormal shutdown message
         }
 
-        [Test]
+        [Fact]
         public void FixServer_ReturnsQuote_ForClientsQuoteRequest()
         {
             var heartbeatInterval = TimeSpan.FromMilliseconds(20);
 
-            // Ignore wiring-up type messages
-            _tcpServerActor.IgnoreMessages((message) => message is TcpServerActor.Subscribe);
-            _fixInterpreterActor.IgnoreMessages((message) => message is FixInterpreterActor.SetServer
-                || message is FixInterpreterActor.SetClient || message is HeartbeatMessage);
-
             // Test:
             // 1. Initial client connection
-            _fixServerActor.Tell(new FixServerActor.StartListening());
-            _tcpServerActor.ExpectMsg<TcpServerActor.StartListening>();
-            _tcpServerActor.Send(_fixServerActor, new TcpServerActor.ClientConnected());
-            _tcpServerActor.ExpectMsg<TcpServerActor.AcceptMessages>();
+            MakeClientConnection();
             // 2. The FixServer receives a logon message from the client via the FixInterpreter
             _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, heartbeatInterval));
 
             // 3. The FixServer replies with a logon message
-            _fixInterpreterActor.ExpectMsgFrom<LogonMessage>(_fixServerActor);
+            _fixInterpreterActor.FishForMessage<LogonMessage>(_=>true);
 
             // 4. Client requests quote
             _fixInterpreterActor.Send(_fixServerActor, new QuoteRequest("A", "B", 1, "Quote1", "USDJPY"));
 
             // 5. FixServer returns the corresponding quote
-            _fixInterpreterActor.ExpectMsg<Quote>(message => message.QuoteReqID == "Quote1");
-       
+            _fixInterpreterActor.FishForMessage<Quote>(m => m.QuoteReqID == "Quote1");
         }
 
         // Tests
