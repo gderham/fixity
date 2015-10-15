@@ -4,7 +4,7 @@
 
     using Akka.Actor;
     using Akka.TestKit;
-    using Akka.TestKit.NUnit;
+    using Akka.TestKit.Xunit2;
     using Xunit;
 
     using Actors;
@@ -124,6 +124,13 @@
 
             // 5. FixServer returns the corresponding quote
             _fixInterpreterActor.FishForMessage<Quote>(m => m.QuoteReqID == "Quote1");
+        }
+
+        public void FixServer_SendsResendRequest_IfGapInClientMessageSequence()
+        {
+
+
+
         }
 
         // Tests

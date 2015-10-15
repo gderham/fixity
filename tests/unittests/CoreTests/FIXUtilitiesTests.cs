@@ -2,11 +2,11 @@
 {
     using System.Collections.Generic;
 
-    using NUnit.Framework;
+    using FluentAssertions;
+    using Xunit;
 
     using Core;
 
-    [TestFixture]
     public class FIXUtilitiesTests
     {
         // FIX message format: (delimited by x01)
@@ -49,19 +49,19 @@
 
         //TODO: Add more tests
 
-        [Test]
+        [Fact]
         public void CreateFixMessage_AppendsCorrectChecksum_ForValidMessage()
         {
             string result = FIXUtilities.CreateFixMessage(_logonString1WithoutChecksum);
 
-            Assert.That(result, Is.EqualTo(_logonMessage1));
+            result.Should().Be(_logonMessage1);
         }
 
         #endregion
 
         #region ParseFixMessage tests
 
-        [Test]
+        [Fact]
         public void ParseFixMessage_ReturnsCorrectFields_ForLogonMessage()
         {   
             var expected = new Dictionary<string, string>()
@@ -78,7 +78,7 @@
 
             Dictionary<string, string> result = FIXUtilities.ParseFixMessage(_logonMessage1);
 
-            Assert.That(result, Is.EqualTo(expected));
+            result.ShouldBeEquivalentTo(expected);
         }
 
         #endregion
@@ -87,35 +87,35 @@
 
         //TODO: Test empty message
 
-        [Test]
+        [Fact]
         public void ParseFixMessagesFromText_ReturnsMessage_FromTextContainingSingleMessage()
         { 
             MessageInfo result = FIXUtilities.ParseFixMessagesFromText(_logonMessage1);
 
-            Assert.That(result.RemainingText, Is.Null);
-            Assert.That(result.CompleteMessages, Contains.Item(_logonMessage1));
+            result.Should().NotBeNull();
+            result.CompleteMessages.Should().Contain(_logonMessage1);
             //TODO: Check enumerable has a single item
         }
 
-        [Test]
+        [Fact]
         public void ParseFixMessagesFromText_ReturnsMessageAndRemainder_FromTextContainingMessageAndPartialMessage()
         {
             string text = _logonMessage1 + _partialMessage;
             MessageInfo result = FIXUtilities.ParseFixMessagesFromText(text);
 
-            Assert.That(result.RemainingText, Is.EqualTo(_partialMessage));
-            Assert.That(result.CompleteMessages, Contains.Item(_logonMessage1));
+            result.RemainingText.Should().Be(_partialMessage);
+            result.CompleteMessages.Should().Contain(_logonMessage1);
             //TODO: Check enumerable has a single item
         }
 
-        [Test]
+        [Fact]
         public void ParseFixMessagesFromText_ReturnsTwoMessagesAndRemainder_FromTextContainingTwoMessagesAndPartialMessage()
         {
             string text = _logonMessage1 + _logonMessage1 + _partialMessage; //TODO: Change second to a heartbeat message
             MessageInfo result = FIXUtilities.ParseFixMessagesFromText(text);
 
-            Assert.That(result.RemainingText, Is.EqualTo(_partialMessage));
-            Assert.That(result.CompleteMessages, Contains.Item(_logonMessage1));
+            result.RemainingText.Should().Be(_partialMessage);
+            result.CompleteMessages.Should().Contain(_logonMessage1);
             //TODO: Check enumerable has two items
         }
 
