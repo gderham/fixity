@@ -11,9 +11,12 @@
     using System.Collections.Generic;
 
     /// <summary>
-    /// A FIX Server.
-    /// Uses a TcpServer actor to communicate with FIX clients, with
-    /// FIX message parsing performed by a FixInterpreter actor.
+    /// A FIX Server implemented using Akka.NET.
+    /// 
+    /// Uses a TcpServerActor to communicate with FIX clients, and
+    /// FIX message parsing (between the FIX ASCII text messages and
+    /// the typed Core.FixMessages classes) is performed by a
+    /// FixInterpreterActor.
     /// </summary>
     public class FixServerActor : ReceiveActor
     {
@@ -21,32 +24,54 @@
         
         #region Incoming messages
 
+        /// <summary>
+        /// Instructs FixServer to start listening for client connections.
+        /// </summary>
         public class StartListening { }
 
+        /// <summary>
+        /// Instructs FixServer to close any client connections and to return
+        /// to its initial Ready state.
+        /// </summary>
         public class Shutdown { }
 
         #endregion
 
         #region Internal messages
 
+        /// <summary>
+        /// Causes the FixServer to send a Heartbeat message to the connected
+        /// client.
+        /// </summary>
         private class SendHeartbeat { }
 
         /// <summary>
-        /// An instruction to perform regular admin functions
-        /// e.g. checking the connection is still alive.
+        /// Causes the FixServer to perform regular admin functions
+        /// e.g. checking the client connection is still alive.
         /// </summary>
         private class PerformAdmin { }
 
+        /// <summary>
+        /// Indicates the FixServer has given up waiting for the 
+        /// client to reply to a Logout message.
+        /// </summary>
         private class ClientLogoutTimedOut { }
 
         #endregion
 
+        /// <summary>
+        /// The name of this FixServer is the FIX world.
+        /// </summary>
         private readonly string _serverCompID = "FIXTEST";
+
+        /// <summary>
+        /// The name of the connected FIX client.
+        /// </summary>
         private string _clientCompID;
 
         /// <summary>
         /// The interval between heartbeat messages sent to the client.
-        /// This is negotiated in the received Logon message.
+        /// This is negotiated in the Logon message received by the client.
         /// </summary>
         private TimeSpan _heartbeatInterval;
 
@@ -54,13 +79,17 @@
 
         private DateTime _lastHeartbeatArrivalTime;
 
+        /// <summary>
+        /// The maximum time spent waiting for the client to reciprocate a
+        /// Logout message before assuming the client is lost.
+        /// </summary>
         private readonly TimeSpan LogoutTimeout = TimeSpan.FromSeconds(1);
 
         /// <summary>
         /// The interval for admin functions e.g. checking a heartbeat message 
         /// has been received from the client in the last interval.
         /// </summary>
-        private TimeSpan _adminInterval = TimeSpan.FromSeconds(1); // Must be < _heartbeatInterval
+        private TimeSpan _adminInterval;
 
         private ICancelable _adminCanceller;
 
@@ -73,11 +102,6 @@
         /// The sequence number of the last message received from the client.
         /// </summary>
         private int _inboundSequenceNumber;
-        //TODO: For each message received from the client, check the
-        // sequence number is one more than than the last.
-        // If this is not the case remove Fix client messages
-        // from the mailbox and send a Resend Request (2) to the client
-        // for all missed messages.
 
         /// <summary>
         /// The sequence number of the last message sent to the client.
@@ -85,44 +109,39 @@
         private int _outboundSequenceNumber;
 
         /// <summary>
-        /// A set of FX Spot rates to be used for quotes.
+        /// A set of instrument rates to be used for quotes sent to the client.
         /// </summary>
-        private Dictionary<string, double> _fxSpotOfferRates;
+        private Dictionary<string, double> _instrumentOfferRates;
 
+        /// <summary>
+        /// Enables communicating with a client via a TCP socket.
+        /// </summary>
         private IActorRef _tcpServerActor;
 
         /// <summary>
-        /// We can communicate with the FIX client using typed FIX messages
-        /// via this actor.
+        /// Converts between typed (Core.FixMessages) messages and ASCII text
+        /// message understood by the FIX client.
         /// </summary>
         private IActorRef _fixInterpreterActor;
 
+        /// <param name="prices">
+        /// A dictionary of instrument prices (symbol to rate).
+        /// For example: USDEUR : 0.87964
+        /// </param>
         public FixServerActor(Func<IActorRefFactory, IActorRef> tcpServerCreator,
             Func<IActorRefFactory, IActorRef> fixInterpreterCreator,
-            Dictionary<string,double> prices)
+            Dictionary<string,double> prices = null)
         {
-            _fxSpotOfferRates = prices; //TODO: Update from a message rather than passing in.
+            _instrumentOfferRates = prices;
 
             _tcpServerActor = tcpServerCreator(Context);
             _fixInterpreterActor = fixInterpreterCreator(Context);
 
             _fixInterpreterActor.Tell(new FixInterpreterActor.SetServer(Self));
-            _fixInterpreterActor.Tell(new FixInterpreterActor.SetClient(_tcpServerActor));
-            
+            _fixInterpreterActor.Tell(new FixInterpreterActor.SetClient(_tcpServerActor));           
             _tcpServerActor.Tell(new TcpServerActor.Subscribe(_fixInterpreterActor));
 
             BecomeReady();
-        }
-
-        /// <summary>
-        /// Set up a scheduled repeated message sent to Self.
-        /// </summary>
-        private Cancelable ScheduleRepeatedMessage(TimeSpan interval, object message)
-        {
-            var canceller = new Cancelable(Context.System.Scheduler);
-            Context.System.Scheduler.ScheduleTellRepeatedly(interval, interval,
-                Self, message, ActorRefs.Nobody, canceller);
-            return canceller;
         }
 
         #region States
@@ -146,6 +165,9 @@
             });
         }
 
+        /// <summary>
+        /// A client has connected, now wait for its Logon message.
+        /// </summary>
         public void Connected()
         {
             // Messages from client
@@ -153,14 +175,14 @@
             {
                 _clientCompID = message.SenderCompID;
                 _heartbeatInterval = message.HeartBeatInterval;
+                _adminInterval = TimeSpan.FromMilliseconds(_heartbeatInterval.TotalMilliseconds / 2);
                 _inboundSequenceNumber = message.MessageSequenceNumber;
-                //TODO: Check sequence number on received messages is as expected.
                 BecomeLoggedOn();
             });
 
             Receive<HeartbeatMessage>(message =>
             {
-                _lastHeartbeatArrivalTime = DateTime.UtcNow; //TODO: The server could timestamp messages as they arrive to avoid checking the time here?
+                _lastHeartbeatArrivalTime = DateTime.UtcNow;
                 _inboundSequenceNumber = message.MessageSequenceNumber;
             });
 
@@ -172,6 +194,10 @@
             });
         }
 
+        /// <summary>
+        /// The main processing state: the client is successfully logged on
+        /// and we process its requests until Logout.
+        /// </summary>
         public void LoggedOn()
         {
             // Messages from client
@@ -191,7 +217,8 @@
 
             Receive<QuoteRequest>(message =>
             {
-                if (_fxSpotOfferRates.ContainsKey(message.Symbol))
+                if (_instrumentOfferRates != null && 
+                    _instrumentOfferRates.ContainsKey(message.Symbol))
                 {
                     _log.Debug("Responding to RFQ for " + message.Symbol);
 
@@ -199,14 +226,15 @@
 
                     var quote = new Quote(_serverCompID, _clientCompID,
                         _outboundSequenceNumber++, message.QuoteReqID, quoteID,
-                        message.Symbol, _fxSpotOfferRates[message.Symbol]);
+                        message.Symbol, _instrumentOfferRates[message.Symbol]);
 
                     _fixInterpreterActor.Tell(quote);
                 }
                 else
                 {
-                    // Reply - unable to quote
-                    //TODO: Implement
+                    _log.Error("Unable to quote client for requested instrument: " + 
+                        message.Symbol);
+                    //TODO: Implement unable to quote message
                 }
             });
 
@@ -244,7 +272,7 @@
 
         /// <summary>
         /// A Logout message has been sent to the client and we're waiting for
-        /// a Logout message to be reciprocated before shutting down the server.
+        /// this to be reciprocated before shutting down the server.
         /// </summary>
         public void WaitingForClientLogout()
         {
@@ -305,10 +333,12 @@
             _fixInterpreterActor.Tell(response);
 
             // Start sending heartbeat messages to the client
-            _heartbeatCanceller = ScheduleRepeatedMessage(_heartbeatInterval, new SendHeartbeat());
+            _heartbeatCanceller =  Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
+                _heartbeatInterval, _heartbeatInterval, Self, new SendHeartbeat(), ActorRefs.Nobody);
 
             // And check for returned heartbeats in an admin function
-            _adminCanceller = ScheduleRepeatedMessage(_adminInterval, new PerformAdmin());
+            _adminCanceller = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
+                _adminInterval, _adminInterval, Self, new PerformAdmin(), ActorRefs.Nobody);
         }
 
         public void BecomeWaitingForClientLogout()
@@ -317,9 +347,8 @@
 
             // Schedule waiting for client logout
             _clientLogoutWaitCanceller = new Cancelable(Context.System.Scheduler);
-            Context.System.Scheduler.ScheduleTellOnce(LogoutTimeout,
-                Self, new ClientLogoutTimedOut(), ActorRefs.Nobody,
-                _clientLogoutWaitCanceller);
+            _clientLogoutWaitCanceller = Context.System.Scheduler.ScheduleTellOnceCancelable(
+                LogoutTimeout, Self, new ClientLogoutTimedOut(), ActorRefs.Nobody);
             
             Become(WaitingForClientLogout);
         }
