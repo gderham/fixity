@@ -60,7 +60,7 @@
             // Text messages from the client to the server
             Receive<TcpServerActor.ReceivedMessage>(message =>
             {
-                _server.Tell(_parser.ParseMessage(message.Text));
+                _server.Tell(_parser.ConvertFixMessageToFixObject(message.Text));
             });
 
             // Typed messages from the server to the client
@@ -83,7 +83,7 @@
 
         private void ConvertAndSendMessage(BaseMessage message)
         {
-            string fixMessage = _parser.CreateMessage(message);
+            string fixMessage = _parser.ConvertFixObjectToFixMessage(message);
             _client.Tell(new TcpServerActor.SendMessage(fixMessage));
         }
     }

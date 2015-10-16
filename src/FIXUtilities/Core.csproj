@@ -59,7 +59,6 @@
     <Compile Include="FixMessages\QuoteRequest.cs" />
     <Compile Include="FixParser.cs" />
     <Compile Include="MessageInfo.cs" />
-    <Compile Include="FIXUtilities.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

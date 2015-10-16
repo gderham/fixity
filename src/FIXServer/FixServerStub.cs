@@ -30,7 +30,7 @@
             };
 
             var tcpServerProps = Props.Create(() => new TcpServerActor(port,
-                FIXUtilities.ParseFixMessagesFromText));
+                FixParser.ExtractFixMessages));
             Func<IActorRefFactory, IActorRef> tcpServerCreator =
                 (context) => context.ActorOf(tcpServerProps, "TcpServer");
 

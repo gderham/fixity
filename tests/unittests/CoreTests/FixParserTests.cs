@@ -6,8 +6,9 @@
     using Xunit;
 
     using Core;
+    using System;
 
-    public class FIXUtilitiesTests
+    public class FixParserTests
     {
         // FIX message format: (delimited by x01)
         //   8=FIXT1.1
@@ -32,37 +33,53 @@
 
         private readonly string _partialMessage;
 
-        public FIXUtilitiesTests()
+        public FixParserTests()
         {
             //TODO: Set the BodyLength (9) correctly
             _logonString1WithoutChecksum = "8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|108=30|";
 
             _logonMessage1 =
-                FIXUtilities.SetFIXDelimiter("8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|108=30|10=80|");
+                SetFIXDelimiter("8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|108=30|10=80|");
             _logonMessage1WithoutChecksum =
-                FIXUtilities.SetFIXDelimiter("8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|108=30|");
+                SetFIXDelimiter("8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|108=30|");
 
-            _partialMessage = FIXUtilities.SetFIXDelimiter("8=FIXT1.1|9=10");
+            _partialMessage = SetFIXDelimiter("8=FIXT1.1|9=10");
         }
 
-        #region CreateFixMessage tests
+        #region Test helper methods
 
-        //TODO: Add more tests
-
-        [Fact]
-        public void CreateFixMessage_AppendsCorrectChecksum_ForValidMessage()
+        private static string SetFIXDelimiter(string message)
         {
-            string result = FIXUtilities.CreateFixMessage(_logonString1WithoutChecksum);
+            return message.Replace('|', FixParser.FixDelimiter);
+        }
 
-            result.Should().Be(_logonMessage1);
+        /// <summary>
+        /// Converts a | delimited string message to use the FIX SOH delimiter
+        /// and appends the correct checksum.
+        /// </summary>
+        /// <param name="message">
+        /// For example: 8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|
+        /// </param>
+        /// <returns>
+        /// For example: 8=FIXT1.1[SOH]9=100[SOH]35=A[SOH]49=SomeClient[SOH]56=SomeFacility[SOH]34=1[SOH]10=21[SOH]
+        /// </returns>
+        private static string CreateFixMessage(string message)
+        {
+            if (!message.EndsWith("|"))
+            {
+                throw new ArgumentException("Message must be be terminated by a | delimiter.",
+                    "message");
+            }
+
+            return FixParser.AddChecksum(SetFIXDelimiter(message));
         }
 
         #endregion
 
-        #region ParseFixMessage tests
+        #region ParseFixMessageIntoDictionary tests
 
         [Fact]
-        public void ParseFixMessage_ReturnsCorrectFields_ForLogonMessage()
+        public void ParseFixMessageIntoDictionary_ReturnsCorrectFields_ForLogonMessage()
         {   
             var expected = new Dictionary<string, string>()
             {
@@ -76,21 +93,21 @@
                 {"10", "80"}
             };
 
-            Dictionary<string, string> result = FIXUtilities.ParseFixMessage(_logonMessage1);
+            Dictionary<string, string> result = FixParser.ParseFixMessageIntoDictionary(_logonMessage1);
 
             result.ShouldBeEquivalentTo(expected);
         }
 
         #endregion
 
-        #region ParseFixMessagesFromText tests
+        #region ExtractFixMessages tests
 
         //TODO: Test empty message
 
         [Fact]
-        public void ParseFixMessagesFromText_ReturnsMessage_FromTextContainingSingleMessage()
+        public void ExtractFixMessages_ReturnsMessage_FromTextContainingSingleMessage()
         { 
-            MessageInfo result = FIXUtilities.ParseFixMessagesFromText(_logonMessage1);
+            MessageInfo result = FixParser.ExtractFixMessages(_logonMessage1);
 
             result.Should().NotBeNull();
             result.CompleteMessages.Should().Contain(_logonMessage1);
@@ -98,10 +115,10 @@
         }
 
         [Fact]
-        public void ParseFixMessagesFromText_ReturnsMessageAndRemainder_FromTextContainingMessageAndPartialMessage()
+        public void ExtractFixMessages_ReturnsMessageAndRemainder_FromTextContainingMessageAndPartialMessage()
         {
             string text = _logonMessage1 + _partialMessage;
-            MessageInfo result = FIXUtilities.ParseFixMessagesFromText(text);
+            MessageInfo result = FixParser.ExtractFixMessages(text);
 
             result.RemainingText.Should().Be(_partialMessage);
             result.CompleteMessages.Should().Contain(_logonMessage1);
@@ -109,10 +126,10 @@
         }
 
         [Fact]
-        public void ParseFixMessagesFromText_ReturnsTwoMessagesAndRemainder_FromTextContainingTwoMessagesAndPartialMessage()
+        public void ExtractFixMessages_ReturnsTwoMessagesAndRemainder_FromTextContainingTwoMessagesAndPartialMessage()
         {
             string text = _logonMessage1 + _logonMessage1 + _partialMessage; //TODO: Change second to a heartbeat message
-            MessageInfo result = FIXUtilities.ParseFixMessagesFromText(text);
+            MessageInfo result = FixParser.ExtractFixMessages(text);
 
             result.RemainingText.Should().Be(_partialMessage);
             result.CompleteMessages.Should().Contain(_logonMessage1);
