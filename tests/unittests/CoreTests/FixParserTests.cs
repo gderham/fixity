@@ -78,8 +78,7 @@
         #endregion
 
         #region ConvertFixMessageToFixObject tests
-
-
+        
         #endregion
 
         #region ConvertFixObjectToFixMessage tests
@@ -90,11 +89,35 @@
             var messageObject = new LogonMessage("Client", "Bank", 1,
                 TimeSpan.FromSeconds(30));
             
-            string result = (new FixParser()).ConvertFixObjectToFixMessage(messageObject);
+            string result = new FixParser().ConvertFixObjectToFixMessage(messageObject);
 
             string expected = "8=FIXT1.1\u00019=35\u000135=A\u000149=Client\u000156=Bank\u000134=1\u0001108=30\u000110=70\u0001";
 
             result.Should().Be(expected);
+        }
+
+        [Fact]
+        public void ConvertFixObjectToFixMessage_ReturnsCorrectString_ForQuoteMessage()
+        {
+            var messageObject = new Quote("Client", "Bank", 7, "rfq712", "q712", "USDJPY", 119.55);
+
+            string result = new FixParser().ConvertFixObjectToFixMessage(messageObject);
+
+            string expected = "8=FIXT1.1\u00019=71\u000135=S\u000149=Client\u000156=Bank\u000134=7\u0001131=rfq712\u0001117=q712\u000155=USDJPY\u0001133=119.5500\u000110=171\u0001";
+
+            result.Should().Be(expected);
+        }
+
+        [Fact]
+        public void ConvertFixObjectToFixMessage_ThrowsException_ForUnsupportedMessageType()
+        {
+            // There is no converter for the QuoteRequest message because only
+            // the client sends it; the server has no need to generate it.
+            var messageObject = new QuoteRequest("Client", "Bank", 6, "rfq712", "USDJPY");
+
+            new FixParser().Invoking(fp => fp.ConvertFixObjectToFixMessage(messageObject))
+                .ShouldThrow<ArgumentException>()
+                .WithMessage("Unable to convert Fixity.FixMessages.QuoteRequest to FIX message.");
         }
 
         #endregion

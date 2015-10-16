@@ -121,14 +121,16 @@
             }
             else if (message is LogoutMessage)
             {
-                // No additional fields to add.
+                fixFields[MESSAGETYPE_FIELD] = LOGOUT_MESSAGE;
             }
             else if (message is Quote)
             {
                 var msg = (Quote)message;
+                fixFields[MESSAGETYPE_FIELD] = QUOTE_MESSAGE;
                 fixFields[QUOTEREQID_FIELD] = msg.QuoteReqID;
                 fixFields[QUOTEID_FIELD] = msg.QuoteID;
                 fixFields[SYMBOL_FIELD] = msg.Symbol;
+                fixFields[OFFERPX_FIELD] = string.Format("{0:0.0000}", msg.OfferPx);
             }
             else
             {
