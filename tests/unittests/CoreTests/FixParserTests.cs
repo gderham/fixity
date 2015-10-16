@@ -97,6 +97,30 @@
         }
 
         [Fact]
+        public void ConvertFixObjectToFixMessage_ReturnsCorrectString_ForLogoutMessage()
+        {
+            var messageObject = new LogoutMessage("Client", "Bank", 1);
+
+            string result = new FixParser().ConvertFixObjectToFixMessage(messageObject);
+
+            string expected = "8=FIXT1.1\u00019=28\u000135=5\u000149=Client\u000156=Bank\u000134=1\u000110=2\u0001";
+
+            result.Should().Be(expected);
+        }
+
+        [Fact]
+        public void ConvertFixObjectToFixMessage_ReturnsCorrectString_ForHeartbeatMessage()
+        {
+            var messageObject = new HeartbeatMessage("Client", "Bank", 1);
+
+            string result = new FixParser().ConvertFixObjectToFixMessage(messageObject);
+
+            string expected = "8=FIXT1.1\u00019=28\u000135=0\u000149=Client\u000156=Bank\u000134=1\u000110=253\u0001";
+
+            result.Should().Be(expected);
+        }
+
+        [Fact]
         public void ConvertFixObjectToFixMessage_ReturnsCorrectString_ForQuoteMessage()
         {
             var messageObject = new Quote("Client", "Bank", 7, "rfq712", "q712", "USDJPY", 119.55);
