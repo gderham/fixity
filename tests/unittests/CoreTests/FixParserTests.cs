@@ -7,6 +7,7 @@
 
     using Core;
     using System;
+    using FixMessages;
 
     public class FixParserTests
     {
@@ -83,33 +84,50 @@
 
         #region ConvertFixObjectToFixMessage tests
 
+        [Fact]
+        public void ConvertFixObjectToFixMessage_ReturnsCorrectString_ForLogonMessage()
+        {
+            var messageObject = new LogonMessage("Client", "Bank", 1,
+                TimeSpan.FromSeconds(30));
+            
+            string result = (new FixParser()).ConvertFixObjectToFixMessage(messageObject);
+
+            string expected = "8=FIXT1.1\u00019=35\u000135=A\u000149=Client\u000156=Bank\u000134=1\u0001108=30\u000110=70\u0001";
+
+            result.Should().Be(expected);
+        }
+
         #endregion
 
         #region ParseFixMessageIntoDictionary tests
+
+        [Fact]
+        public void ParseFixMessageIntoDictionary_ReturnEmptyDictionary_ForEmptyText()
+        {
+            Dictionary<string, string> result = FixParser.ParseFixMessageIntoDictionary("");
+
+            result.Should().BeEmpty();
+        }
 
         [Fact]
         public void ParseFixMessageIntoDictionary_ReturnsCorrectFields_ForLogonMessage()
         {   
             var expected = new Dictionary<string, string>()
             {
-                {"8",  "FIXT1.1"},
-                {"9",  "100"},
-                {"35", "A"},
-                {"49", "SomeClient"},
-                {"56", "SomeFacility"},
-                {"34", "1"},
-                {"108","30"},
-                {"10", "80"}
+                {FixParser.BEGINSTRING_FIELD,  FixParser.BEGINSTRING},
+                {FixParser.BODYLENGTH_FIELD,   "100"},
+                {FixParser.MESSAGETYPE_FIELD,  FixParser.LOGON_MESSAGE},
+                {FixParser.SENDERCOMPID_FIELD, "SomeClient"},
+                {FixParser.TARGETCOMPID_FIELD, "SomeFacility"},
+                {FixParser.MSGSEQNUM_FIELD,    "1"},
+                {FixParser.HEARTBTINT_FIELD,   "30"},
+                {FixParser.CHECKSUM_FIELD,     "80"}
             };
 
             Dictionary<string, string> result = FixParser.ParseFixMessageIntoDictionary(_logonMessage1);
 
             result.ShouldBeEquivalentTo(expected);
         }
-
-        #endregion
-
-        #region CreateFixMessageFromDictionary tests
 
         #endregion
 

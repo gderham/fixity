@@ -20,29 +20,29 @@
         private static Regex _fixFieldPattern = new Regex("(\\d{1,3})=([A-Za-z0-9_ \\.]+)\x01");
 
         // Message types - see http://www.onixs.biz/fix-dictionary/4.3/msgs_by_msg_type.html
-        private const string HEARTBEAT_MESSAGE    = "0";
-        private const string LOGON_MESSAGE        = "A";
-        private const string LOGOUT_MESSAGE       = "5";
-        private const string QUOTEREQUEST_MESSAGE = "R";
-        private const string QUOTE_MESSAGE        = "S";
+        public const string HEARTBEAT_MESSAGE    = "0";
+        public const string LOGON_MESSAGE        = "A";
+        public const string LOGOUT_MESSAGE       = "5";
+        public const string QUOTEREQUEST_MESSAGE = "R";
+        public const string QUOTE_MESSAGE        = "S";
 
         // Field names - see http://www.onixs.biz/fix-dictionary/4.3/fields_by_name.html
-        private const string BEGINSTRING_FIELD    = "8";
-        private const string BODYLENGTH_FIELD     = "9";
-        private const string CHECKSUM_FIELD       = "10";
-        private const string MSGSEQNUM_FIELD      = "34";
-        private const string MESSAGETYPE_FIELD    = "35";
-        private const string SENDERCOMPID_FIELD   = "49";
-        private const string SYMBOL_FIELD         = "55";
-        private const string TARGETCOMPID_FIELD   = "56";
-        private const string HEARTBTINT_FIELD     = "108";
-        private const string QUOTEID_FIELD        = "117";
-        private const string QUOTEREQID_FIELD     = "131";
-        private const string OFFERPX_FIELD        = "133";
-        private const string NORELATEDSYM_FIELD   = "644";
+        public const string BEGINSTRING_FIELD    = "8";
+        public const string BODYLENGTH_FIELD     = "9";
+        public const string CHECKSUM_FIELD       = "10";
+        public const string MSGSEQNUM_FIELD      = "34";
+        public const string MESSAGETYPE_FIELD    = "35";
+        public const string SENDERCOMPID_FIELD   = "49";
+        public const string SYMBOL_FIELD         = "55";
+        public const string TARGETCOMPID_FIELD   = "56";
+        public const string HEARTBTINT_FIELD     = "108";
+        public const string QUOTEID_FIELD        = "117";
+        public const string QUOTEREQID_FIELD     = "131";
+        public const string OFFERPX_FIELD        = "133";
+        public const string NORELATEDSYM_FIELD   = "644";
 
         // Constant field values
-        private const string BEGINSTRING          = "FIXT1.1";
+        public const string BEGINSTRING          = "FIXT1.1";
 
         public const char FixDelimiter = '\x01';
         
@@ -176,7 +176,7 @@
         /// No validation is performed, but the BodyLength and Checksum is
         /// set correctly.
         /// </summary>
-        private string CreateFixMessageFromDictionary(Dictionary<string, string> fixFields)
+        private static string CreateFixMessageFromDictionary(Dictionary<string, string> fixFields)
         {
             // 1. Construct the main body first (between BodyLength and Checksum fields)
             var initialMandatoryFieldsInOrder =
@@ -244,12 +244,12 @@
             return new MessageInfo(wholeMessages, remainingText);
         }
 
-        private string FieldString(string fieldName, string fieldValue)
+        private static string FieldString(string fieldName, string fieldValue)
         {
             return string.Format("{0}={1}{2}", fieldName, fieldValue, FixDelimiter);
         }
 
-        private string ConstructField(Dictionary<string, string> fixFields, string fieldName)
+        private static string ConstructField(Dictionary<string, string> fixFields, string fieldName)
         {
             return FieldString(fieldName, fixFields[fieldName]);
         }
