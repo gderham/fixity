@@ -221,7 +221,7 @@
         public static MessageInfo ExtractFixMessages(string text)
         {
             var wholeMessages = new List<string>();
-            string remainingText = null;
+            string remainingText = "";
 
             //TODO: Replace this logic with a regex (?)
             int indexOfMessageStart = 0;

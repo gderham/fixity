@@ -76,6 +76,15 @@
 
         #endregion
 
+        #region ConvertFixMessageToFixObject tests
+
+
+        #endregion
+
+        #region ConvertFixObjectToFixMessage tests
+
+        #endregion
+
         #region ParseFixMessageIntoDictionary tests
 
         [Fact]
@@ -100,9 +109,20 @@
 
         #endregion
 
+        #region CreateFixMessageFromDictionary tests
+
+        #endregion
+
         #region ExtractFixMessages tests
 
-        //TODO: Test empty message
+        [Fact]
+        public void ExtractFixMessages_ReturnsNoMessagesAndEmptyRemainder_FromEmptyText()
+        {
+            MessageInfo result = FixParser.ExtractFixMessages("");
+
+            result.CompleteMessages.Should().BeEmpty();
+            result.RemainingText.Should().BeEmpty();
+        }
 
         [Fact]
         public void ExtractFixMessages_ReturnsMessage_FromTextContainingSingleMessage()
@@ -111,7 +131,7 @@
 
             result.Should().NotBeNull();
             result.CompleteMessages.Should().Contain(_logonMessage1);
-            //TODO: Check enumerable has a single item
+            result.CompleteMessages.Should().ContainSingle();
         }
 
         [Fact]
@@ -122,18 +142,18 @@
 
             result.RemainingText.Should().Be(_partialMessage);
             result.CompleteMessages.Should().Contain(_logonMessage1);
-            //TODO: Check enumerable has a single item
+            result.CompleteMessages.Should().ContainSingle();
         }
 
         [Fact]
         public void ExtractFixMessages_ReturnsTwoMessagesAndRemainder_FromTextContainingTwoMessagesAndPartialMessage()
         {
-            string text = _logonMessage1 + _logonMessage1 + _partialMessage; //TODO: Change second to a heartbeat message
+            string text = _logonMessage1 + _logonMessage1 + _partialMessage;
             MessageInfo result = FixParser.ExtractFixMessages(text);
 
             result.RemainingText.Should().Be(_partialMessage);
             result.CompleteMessages.Should().Contain(_logonMessage1);
-            //TODO: Check enumerable has two items
+            result.CompleteMessages.Should().HaveCount(2);
         }
 
         #endregion
