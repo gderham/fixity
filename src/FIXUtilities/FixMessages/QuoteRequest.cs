@@ -19,6 +19,10 @@
 
         public string QuoteReqID { get; private set; }
         public int NoRelatedSym { get; private set; }
+
+        /// <summary>
+        /// The symbol of the requested instrument e.g. USDJPY.
+        /// </summary>
         public string Symbol { get; private set; }
     }
 }

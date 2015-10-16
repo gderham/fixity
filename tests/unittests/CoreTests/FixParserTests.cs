@@ -79,6 +79,34 @@
 
         #region ConvertFixMessageToFixObject tests
         
+        [Fact]
+        public void ConvertFixMessageToFixObject_ReturnsLogonMessageObject_ForLogonMessage()
+        {
+            string message = "8=FIXT1.1\u00019=35\u000135=A\u000149=Client\u000156=Bank\u000134=1\u0001108=30\u000110=70\u0001";
+
+            BaseMessage result = new FixParser().ConvertFixMessageToFixObject(message);
+
+            result.Should().BeOfType<LogonMessage>();
+            result.As<LogonMessage>().HeartBeatInterval.TotalSeconds.Should().Be(30);
+            result.As<LogonMessage>().MessageSequenceNumber.Should().Be(1);
+            result.As<LogonMessage>().SenderCompID.Should().Be("Client");
+            result.As<LogonMessage>().TargetCompID.Should().Be("Bank");
+        }
+
+        [Fact]
+        public void ConvertFixMessageToFixObject_ReturnsQuoteRequestObject_ForQuoteRequestMessage()
+        {
+            string message = "8=FIXT1.1\u00019=71\u000135=R\u000149=Client\u000156=Bank\u000134=7\u0001131=rfq712\u000155=USDJPY\u000110=171\u0001";
+
+            BaseMessage result = new FixParser().ConvertFixMessageToFixObject(message);
+
+            result.Should().BeOfType<QuoteRequest>();
+            result.As<QuoteRequest>().SenderCompID.Should().Be("Client");
+            result.As<QuoteRequest>().TargetCompID.Should().Be("Bank");
+            result.As<QuoteRequest>().QuoteReqID.Should().Be("rfq712");
+            result.As<QuoteRequest>().Symbol.Should().Be("USDJPY");
+        }
+
         #endregion
 
         #region ConvertFixObjectToFixMessage tests
