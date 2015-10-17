@@ -1,4 +1,4 @@
-﻿namespace Fixity.FIXServer
+﻿namespace Fixity.FixServer
 {
     using System;
     using System.Collections.Generic;
@@ -6,19 +6,18 @@
     using Akka.Actor;
     using Core.Actors;
     using Core;
-    using Fixity.Actors;
 
     /// <summary>
     /// An ersatz FIX server for use in testing.
     /// Handles connection, logon, heartbeating and canned responses
     /// to requests from a FIX client.
     /// </summary>
-    public class FixServerStub
+    public class FixServer
     {
         private ActorSystem _actorSystem;
         private IActorRef _fixServerActor;
 
-        public FixServerStub(int port)
+        public FixServer(int port)
         {
             _actorSystem = ActorSystem.Create("FIXServer");
 

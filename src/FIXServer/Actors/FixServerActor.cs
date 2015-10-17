@@ -1,14 +1,13 @@
-﻿namespace Fixity.FIXServer.Actors
+﻿namespace Fixity.FixServer.Actors
 {
     using System;
+    using System.Collections.Generic;
 
     using Akka.Actor;
     using log4net;
 
     using Core.Actors;
-    using Fixity.Actors;
-    using FixMessages;
-    using System.Collections.Generic;
+    using Core.FixMessages;
 
     /// <summary>
     /// A FIX Server implemented using Akka.NET.
@@ -57,6 +56,12 @@
         /// </summary>
         private class ClientLogoutTimedOut { }
 
+        /// <summary>
+        /// Indicates the FixServer has given up waiting for the
+        /// client to reply to a Test Request message.
+        /// </summary>
+        private class TestRequestTimedOut { }
+
         #endregion
 
         /// <summary>
@@ -97,6 +102,8 @@
         /// Cancels the waiting for client logout message.
         /// </summary>
         private ICancelable _clientLogoutWaitCanceller;
+
+        private ICancelable _testRequestCanceller;
 
         /// <summary>
         /// The sequence number of the last message received from the client.
@@ -262,11 +269,35 @@
                 // This is the only method employed to check the connection.
                 if (DateTime.UtcNow - _lastHeartbeatArrivalTime > _heartbeatInterval + _heartbeatInterval)
                 {
-                    _log.Debug("Client connection lost.");
-                    // TODO: A TestRequest (1) message should be sent to the
-                    // client to force a heartbeat before giving up.
-                    BecomeShutDown();
+                    _log.Debug("Heartbeat message has not been received from client.");
+                    _log.Debug("Sending TestRequest to client.");
+                    
+                    var testRequest = new TestRequest(_serverCompID, _clientCompID,
+                        _outboundSequenceNumber++, "1");
+                    _fixInterpreterActor.Tell(testRequest);
+                    // We expect to receive a heartbeat with matching TestReqID
+
+                    BecomeWaitingForTestRequestResponse();
                 }
+            });
+        }
+
+        public void WaitingForTestRequestResponse()
+        {
+            //TODO: Should the server respond to normal messages in this state?
+
+            Receive<HeartbeatMessage>(message =>
+            {
+                _lastHeartbeatArrivalTime = DateTime.UtcNow;
+                _inboundSequenceNumber = message.MessageSequenceNumber;
+                _testRequestCanceller.CancelIfNotNull();
+                UnbecomeStacked();
+            });
+
+            Receive<TestRequestTimedOut>(message =>
+            {
+                _log.Debug("Timed out waiting for client to respond to Test Request");
+                BecomeShutDown();
             });
         }
 
@@ -351,6 +382,14 @@
                 LogoutTimeout, Self, new ClientLogoutTimedOut(), ActorRefs.Nobody);
             
             Become(WaitingForClientLogout);
+        }
+
+        public void BecomeWaitingForTestRequestResponse()
+        {
+            BecomeStacked(WaitingForTestRequestResponse);
+
+            _testRequestCanceller = Context.System.Scheduler.ScheduleTellOnceCancelable(
+                _heartbeatInterval, Self, new TestRequestTimedOut(), ActorRefs.Nobody);
         }
 
         public void BecomeShutDown()

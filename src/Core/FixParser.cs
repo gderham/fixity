@@ -1,4 +1,4 @@
-﻿namespace Fixity
+﻿namespace Fixity.Core
 {
     using System;
     using System.Collections.Generic;
@@ -6,7 +6,6 @@
     using System.Text;
     using System.Linq;
 
-    using Core;
     using FixMessages;
 
     /// <summary>

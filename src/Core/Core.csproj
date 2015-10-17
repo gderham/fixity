@@ -7,7 +7,7 @@
     <ProjectGuid>{AB943098-AFD3-46B5-AE2F-14AB1F011759}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Fixity</RootNamespace>
+    <RootNamespace>Fixity.Core</RootNamespace>
     <AssemblyName>Fixity.Core</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

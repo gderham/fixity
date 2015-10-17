@@ -1,4 +1,4 @@
-﻿namespace Fixity.FixMessages
+﻿namespace Fixity.Core.FixMessages
 {
     /// <summary>
     /// Base class for all typed FIX messages.

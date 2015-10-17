@@ -1,10 +1,11 @@
-﻿namespace Fixity.Actors
+﻿namespace Fixity.Core.Actors
 {
     using Akka.Actor;
     using log4net;
 
-    using Core.Actors;
     using FixMessages;
+
+    // TODO: Validate the checksum of incoming messages
 
     /// <summary>
     /// Bidirectional message type converter between client (ASCII text FIX

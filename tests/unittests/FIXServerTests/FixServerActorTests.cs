@@ -1,4 +1,4 @@
-﻿namespace Fixity.Tests.FIXServerTests
+﻿namespace Fixity.FixServerTests
 {
     using System;
     using System.Collections.Generic;
@@ -8,10 +8,9 @@
     using Akka.TestKit.Xunit2;
     using Xunit;
 
-    using Actors;
     using Core.Actors;
-    using FIXServer.Actors;
-    using FixMessages;
+    using Core.FixMessages;
+    using FixServer.Actors;
 
     public class FixServerActorTests : TestKit
     {

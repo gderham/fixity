@@ -5,9 +5,9 @@ VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5691C97E-5213-46C1-B11E-68590D3EAA4D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FIXServer", "FIXServer\FIXServer.csproj", "{A5CE5B4B-CB2E-4388-971E-A16262D4B4AB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FixServer", "FIXServer\FixServer.csproj", "{A5CE5B4B-CB2E-4388-971E-A16262D4B4AB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "FIXUtilities\Core.csproj", "{AB943098-AFD3-46B5-AE2F-14AB1F011759}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Core\Core.csproj", "{AB943098-AFD3-46B5-AE2F-14AB1F011759}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{E8F2E4C2-01E1-4DBB-8C93-C9437E643B48}"
 EndProject
@@ -15,7 +15,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UnitTests", "UnitTests", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreTests", "..\tests\unittests\CoreTests\CoreTests.csproj", "{E879506B-7B4D-4F30-A2E5-3C33BAB50D3F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FIXServerTests", "..\tests\unittests\FIXServerTests\FIXServerTests.csproj", "{B48DEF09-0F61-4F4E-ACC4-F714B3C9869F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FixServerTests", "..\tests\unittests\FIXServerTests\FixServerTests.csproj", "{B48DEF09-0F61-4F4E-ACC4-F714B3C9869F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

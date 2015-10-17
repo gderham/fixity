@@ -1,7 +1,5 @@
-﻿namespace Fixity.FixMessages
+﻿namespace Fixity.Core.FixMessages
 {
-    using Fixity.Core;
-
     /// <summary>
     /// QuoteRequest message R (for a single instrument).
     /// http://www.onixs.biz/fix-dictionary/4.3/msgType_R_82.html

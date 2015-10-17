@@ -8,8 +8,8 @@
     <ProjectGuid>{B48DEF09-0F61-4F4E-ACC4-F714B3C9869F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Fixity.Tests</RootNamespace>
-    <AssemblyName>FIXServerTests</AssemblyName>
+    <RootNamespace>Fixity.FixServerTests</RootNamespace>
+    <AssemblyName>Fixity.FixServerTests</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <NuGetPackageImportStamp>
@@ -82,11 +82,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\FIXServer\FIXServer.csproj">
+    <ProjectReference Include="..\..\..\src\FIXServer\FixServer.csproj">
       <Project>{a5ce5b4b-cb2e-4388-971e-a16262d4b4ab}</Project>
-      <Name>FIXServer</Name>
+      <Name>FixServer</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\src\FIXUtilities\Core.csproj">
+    <ProjectReference Include="..\..\..\src\Core\Core.csproj">
       <Project>{ab943098-afd3-46b5-ae2f-14ab1f011759}</Project>
       <Name>Core</Name>
     </ProjectReference>

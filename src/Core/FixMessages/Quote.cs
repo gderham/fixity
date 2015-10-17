@@ -1,4 +1,4 @@
-﻿namespace Fixity.FixMessages
+﻿namespace Fixity.Core.FixMessages
 {
     /// <summary>
     /// Quote message S.

@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("FIXServerTests")]
+[assembly: AssemblyTitle("Fixity.FixServerTests")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Microsoft Corporation")]
-[assembly: AssemblyProduct("FIXServerTests")]
-[assembly: AssemblyCopyright("Copyright © Microsoft Corporation 2015")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyProduct("Fixity")]
+[assembly: AssemblyCopyright("")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

@@ -1,13 +1,13 @@
 ﻿namespace Fixity.CoreTests
 {
+    using System;
     using System.Collections.Generic;
 
     using FluentAssertions;
     using Xunit;
 
     using Core;
-    using System;
-    using FixMessages;
+    using Core.FixMessages;
 
     public class FixParserTests
     {
@@ -214,7 +214,7 @@
 
             new FixParser().Invoking(fp => fp.ConvertFixObjectToFixMessage(messageObject))
                 .ShouldThrow<ArgumentException>()
-                .WithMessage("Unable to convert Fixity.FixMessages.QuoteRequest to FIX message.");
+                .WithMessage("Unable to convert Fixity.Core.FixMessages.QuoteRequest to FIX message.");
         }
 
         #endregion
