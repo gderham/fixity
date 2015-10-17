@@ -285,6 +285,7 @@
         public void WaitingForTestRequestResponse()
         {
             //TODO: Should the server respond to normal messages in this state?
+            //I.e. any message resets the TestRequest?
 
             Receive<HeartbeatMessage>(message =>
             {
@@ -319,11 +320,6 @@
                 _log.Debug("Timed out waiting for client Logout message");
                 BecomeShutDown();
             });
-        }
-
-        public void ShuttingDown()
-        {
-            //TODO: Wait for shutdown confirmation from TcpServer then go to Ready state.
         }
 
         #endregion
