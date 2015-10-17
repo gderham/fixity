@@ -21,6 +21,7 @@
 
         // Message types - see http://www.onixs.biz/fix-dictionary/4.3/msgs_by_msg_type.html
         public const string HEARTBEAT_MESSAGE    = "0";
+        public const string TESTREQUEST_MESSAGE  = "1";
         public const string LOGON_MESSAGE        = "A";
         public const string LOGOUT_MESSAGE       = "5";
         public const string QUOTEREQUEST_MESSAGE = "R";
@@ -36,6 +37,7 @@
         public const string SYMBOL_FIELD         = "55";
         public const string TARGETCOMPID_FIELD   = "56";
         public const string HEARTBTINT_FIELD     = "108";
+        public const string TESTREQID_FIELD      = "112";
         public const string QUOTEID_FIELD        = "117";
         public const string QUOTEREQID_FIELD     = "131";
         public const string OFFERPX_FIELD        = "133";
@@ -130,6 +132,12 @@
                 fixFields[QUOTEID_FIELD] = msg.QuoteID;
                 fixFields[SYMBOL_FIELD] = msg.Symbol;
                 fixFields[OFFERPX_FIELD] = string.Format("{0:0.0000}", msg.OfferPx);
+            }
+            else if (message is TestRequest)
+            {
+                var msg = (TestRequest)message;
+                fixFields[MESSAGETYPE_FIELD] = TESTREQUEST_MESSAGE;
+                fixFields[TESTREQID_FIELD] = msg.TestReqID;
             }
             else
             {

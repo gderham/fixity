@@ -98,6 +98,26 @@
         }
 
         [Fact]
+        public void FixServer_ServerSendsTestRequest_IfClientFailsToHeartbeat()
+        {
+            // 1. Initial client connection
+            MakeClientConnection();
+
+            // 2. The FixServer receives a logon message from the client via the FixInterpreter
+            _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, _heartbeatInterval));
+
+            // 3. The FixServer replies with a logon message
+            _fixInterpreterActor.ExpectMsgFrom<LogonMessage>(_fixServerActor);
+
+            // 4. Wait for the server to notice the lack of heartbeat and
+            // send a TestRequest
+            _fixInterpreterActor.FishForMessage<TestRequest>(_ => true);
+
+            // 6. The client doesn't respond so the server shuts down the connection
+            _tcpServerActor.FishForMessage<TcpServerActor.Shutdown>(_ => true);
+        }
+
+        [Fact]
         public void FixServer_ServerShutsDown_AfterClientFailsToRespondToLogout()
         {
             var shutdownWait = TimeSpan.FromMilliseconds(1100); // > logout timeout = 1s
@@ -149,7 +169,6 @@
         }
 
         // More tests
-        // 1. Connect, logon, heartbeat, client logoff, shutdown
         // 2. Connect, logon, heartbeat not received
         // 3. Message received with incorrect seq number - log error for now
         // 4. Interpreter tests

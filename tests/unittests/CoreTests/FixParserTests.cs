@@ -185,6 +185,18 @@
         }
 
         [Fact]
+        public void ConvertFixObjectToFixMessage_ReturnsCorrectString_ForTestRequestMessage()
+        {
+            var messageObject = new TestRequest("Client", "Bank", 7, "Attempt1");
+
+            string result = new FixParser().ConvertFixObjectToFixMessage(messageObject);
+
+            string expected = "8=FIXT1.1\u00019=33\u000135=1\u000149=Client\u000156=Bank\u000134=7\u0001112=\u000110=210\u0001";
+
+            result.Should().Be(expected);
+        }
+
+        [Fact]
         public void ConvertFixObjectToFixMessage_ReturnsCorrectString_ForQuoteMessage()
         {
             var messageObject = new Quote("Client", "Bank", 7, "rfq712", "q712", "USDJPY", 119.55);
