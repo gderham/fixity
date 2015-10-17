@@ -54,7 +54,6 @@
         [Fact]
         public void FixServer_ServerLogsOutSuccessfully_AfterClientConnectAndLogon()
         {
-            // Test:
             // 1. Initial client connection
             MakeClientConnection();
 
@@ -77,11 +76,8 @@
         }
 
         [Fact]
-        public void FixServer_ServerShutsDown_AfterClientFailsToRespondToLogout()
+        public void FixServer_ClientLogsOutSuccessfully_AfterClientConnectAndLogon()
         {
-            var shutdownWait = TimeSpan.FromMilliseconds(1100); // > logout timeout = 1s
-
-            // Test:
             // 1. Initial client connection
             MakeClientConnection();
 
@@ -89,7 +85,30 @@
             _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, _heartbeatInterval));
 
             // 3. The FixServer replies with a logon message
-            //_fixInterpreterActor.ExpectMsgFrom<LogonMessage>(_fixServerActor);
+            _fixInterpreterActor.ExpectMsgFrom<LogonMessage>(_fixServerActor);
+
+            // 4. Client requests logout.
+            _fixInterpreterActor.Send(_fixServerActor, new LogoutMessage("A", "B", 2));
+
+            // 5. The server should reciprocate with a Logout messasge.
+            _fixInterpreterActor.ExpectMsg<LogoutMessage>();
+
+            // 6. The server shuts down the TCP socket
+            _tcpServerActor.FishForMessage<TcpServerActor.Shutdown>(_ => true);
+        }
+
+        [Fact]
+        public void FixServer_ServerShutsDown_AfterClientFailsToRespondToLogout()
+        {
+            var shutdownWait = TimeSpan.FromMilliseconds(1100); // > logout timeout = 1s
+
+            // 1. Initial client connection
+            MakeClientConnection();
+
+            // 2. The FixServer receives a logon message from the client via the FixInterpreter
+            _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, _heartbeatInterval));
+
+            // 3. The FixServer replies with a logon message
             _fixInterpreterActor.FishForMessage<LogonMessage>(_ => true);
             // We use FishForMessage to ignore any heartbeat messages
 
@@ -108,6 +127,7 @@
         {
             // 1. Initial client connection
             MakeClientConnection();
+
             // 2. The FixServer receives a logon message from the client via the FixInterpreter
             _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, _heartbeatInterval));
 
