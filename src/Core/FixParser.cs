@@ -52,7 +52,6 @@
         /// </summary>
         public BaseMessage ConvertFixMessageToFixObject(string text)
         {
-            //TODO: Throw parse exception if anything fails here
             Dictionary<string, string> fixFields = ParseFixMessageIntoDictionary(text);
 
             string messageType = fixFields[MESSAGETYPE_FIELD];
@@ -234,7 +233,7 @@
             //TODO: Replace this logic with a regex (?)
             int indexOfMessageStart = 0;
             int indexOfMessageEnd = 0;
-            foreach (Match match in _fixFieldPattern.Matches(text)) //TODO: Check the matches are guaranteed to be ordered
+            foreach (Match match in _fixFieldPattern.Matches(text))
             {
                 if (match.Value.StartsWith(CHECKSUM_FIELD + "="))
                 {

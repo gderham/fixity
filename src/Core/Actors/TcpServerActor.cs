@@ -158,7 +158,7 @@
                 BecomeListeningForClient();
             });
 
-            Receive<Subscribe>(message => //TODO: This should be available in any state.
+            Receive<Subscribe>(message =>
             {
                 _listener = message.Actor;
             });
@@ -210,8 +210,7 @@
                     if (task.Status == TaskStatus.Faulted)
                     {
                         // This happens if the socket is closed server side.
-
-                        return null; //TODO: Create a message type to indicate stream read fault? Yes otherwise it goes to unhandled.
+                        return null;
                     }
                     //TODO: Check for other error states before reading the result
 
@@ -234,7 +233,6 @@
                 // We received some bytes which contains (possibly multiple) messages.
                 foreach (string msg in info.CompleteMessages)
                 {
-                    //TODO: Must be a better way to do this?
                     _listener.Tell(new ReceivedMessage(msg));
                 }
 
@@ -278,7 +276,7 @@
 
         public void BecomeConnected()
         {
-            _log.Debug("Connected to client."); //TODO: Log remote endpoint etc
+            _log.Debug("Connected to client.");
             Become(ConnectedToClient);
             Context.Parent.Tell(new ClientConnected());
         }

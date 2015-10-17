@@ -5,8 +5,6 @@
 
     using FixMessages;
 
-    // TODO: Validate the checksum of incoming messages
-
     /// <summary>
     /// Bidirectional message type converter between client (ASCII text FIX
     /// messages) and server (typed subclasses of BaseMessage).
@@ -49,7 +47,7 @@
 
         public void Processing()
         {
-            Receive<SetClient>(message => //TODO: Do something better
+            Receive<SetClient>(message =>
             {
                 _client = message.Actor;
             });
