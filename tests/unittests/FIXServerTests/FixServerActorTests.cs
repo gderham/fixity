@@ -1,6 +1,7 @@
 ﻿namespace Fixity.Tests.FIXServerTests
 {
     using System;
+    using System.Collections.Generic;
 
     using Akka.Actor;
     using Akka.TestKit;
@@ -11,7 +12,6 @@
     using Core.Actors;
     using FIXServer.Actors;
     using FixMessages;
-    using System.Collections.Generic;
 
     public class FixServerActorTests : TestKit
     {
@@ -19,10 +19,11 @@
         private TestProbe _tcpServerActor;
         private TestProbe _fixInterpreterActor;
 
+        private TimeSpan _heartbeatInterval = TimeSpan.FromMilliseconds(20);
+
         public FixServerActorTests()
         {
-            // Some invented FX spot rates
-            var prices = new Dictionary<string, double>()
+            var instrumentPrices = new Dictionary<string, double>()
             {
                 { "USDGBP", 0.65575 },
                 { "USDJPY", 119.75 }
@@ -38,7 +39,7 @@
             Func<IActorRefFactory, IActorRef> fixInterpreterCreator = (_) => _fixInterpreterActor;
 
             var fixServerProps = Props.Create(() => new FixServerActor(tcpServerCreator,
-                fixInterpreterCreator, prices));
+                fixInterpreterCreator, instrumentPrices));
             _fixServerActor = ActorOf(fixServerProps, "FixServer");
         }
 
@@ -53,20 +54,18 @@
         [Fact]
         public void FixServer_ServerLogsOutSuccessfully_AfterClientConnectAndLogon()
         {
-            var heartbeatInterval = TimeSpan.FromMilliseconds(20);
-
             // Test:
             // 1. Initial client connection
             MakeClientConnection();
 
             // 2. The FixServer receives a logon message from the client via the FixInterpreter
-            _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, heartbeatInterval));
+            _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, _heartbeatInterval));
 
             // 3. The FixServer replies with a logon message
             _fixInterpreterActor.ExpectMsgFrom<LogonMessage>(_fixServerActor);
 
             // 4. and starts to send heartbeat messages to client via the FixInterpreter
-            _fixInterpreterActor.ExpectMsg<HeartbeatMessage>(heartbeatInterval.Add(TimeSpan.FromMilliseconds(50)));
+            _fixInterpreterActor.ExpectMsg<HeartbeatMessage>(_heartbeatInterval.Add(TimeSpan.FromMilliseconds(50)));
 
             // 5. FixServer shutdown causes a logout message to be sent to the client.
             _fixServerActor.Tell(new FixServerActor.Shutdown());
@@ -80,7 +79,6 @@
         [Fact]
         public void FixServer_ServerShutsDown_AfterClientFailsToRespondToLogout()
         {
-            var heartbeatInterval = TimeSpan.FromMilliseconds(20);
             var shutdownWait = TimeSpan.FromMilliseconds(1100); // > logout timeout = 1s
 
             // Test:
@@ -88,7 +86,7 @@
             MakeClientConnection();
 
             // 2. The FixServer receives a logon message from the client via the FixInterpreter
-            _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, heartbeatInterval));
+            _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, _heartbeatInterval));
 
             // 3. The FixServer replies with a logon message
             //_fixInterpreterActor.ExpectMsgFrom<LogonMessage>(_fixServerActor);
@@ -108,13 +106,10 @@
         [Fact]
         public void FixServer_ReturnsQuote_ForClientsQuoteRequest()
         {
-            var heartbeatInterval = TimeSpan.FromMilliseconds(20);
-
-            // Test:
             // 1. Initial client connection
             MakeClientConnection();
             // 2. The FixServer receives a logon message from the client via the FixInterpreter
-            _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, heartbeatInterval));
+            _fixInterpreterActor.Send(_fixServerActor, new LogonMessage("A", "B", 0, _heartbeatInterval));
 
             // 3. The FixServer replies with a logon message
             _fixInterpreterActor.FishForMessage<LogonMessage>(_=>true);
@@ -133,13 +128,11 @@
 
         }
 
-        // Tests
-        // 2. Connect, logon, heartbeat, client logoff, shutdown
-        // 3. Connect, logon, heartbeat not received
-        // 4. Message received with incorrect seq number
-        // 5. RFQ message received - respond with quote
-        // + interpreter tests
-        // + don't bother about TcpServer tests
-        // + int tests with server and clients
+        // More tests
+        // 1. Connect, logon, heartbeat, client logoff, shutdown
+        // 2. Connect, logon, heartbeat not received
+        // 3. Message received with incorrect seq number - log error for now
+        // 4. Interpreter tests
+        // 5. TcpServerActor tests - would need to swap out the actual TcpListener/client for an interface
     }
 }
