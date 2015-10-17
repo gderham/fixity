@@ -107,6 +107,42 @@
             result.As<QuoteRequest>().Symbol.Should().Be("USDJPY");
         }
 
+        [Fact]
+        public void ConvertFixMessageToFixObject_ReturnsLogoutObject_ForLogoutMessage()
+        {
+            string message = "8=FIXT1.1\u00019=28\u000135=5\u000149=Client\u000156=Bank\u000134=1\u000110=2\u0001";
+
+            BaseMessage result = new FixParser().ConvertFixMessageToFixObject(message);
+
+            result.Should().BeOfType<LogoutMessage>();
+            result.As<LogoutMessage>().SenderCompID.Should().Be("Client");
+            result.As<LogoutMessage>().TargetCompID.Should().Be("Bank");
+        }
+
+        [Fact]
+        public void ConvertFixMessageToFixObject_ReturnsHeartbeatObject_ForHeartbeatMessage()
+        {
+            string message = "8=FIXT1.1\u00019=28\u000135=0\u000149=Client\u000156=Bank\u000134=1\u000110=253\u0001";
+
+            BaseMessage result = new FixParser().ConvertFixMessageToFixObject(message);
+
+            result.Should().BeOfType<HeartbeatMessage>();
+            result.As<HeartbeatMessage>().SenderCompID.Should().Be("Client");
+            result.As<HeartbeatMessage>().TargetCompID.Should().Be("Bank");
+        }
+
+        [Fact]
+        public void ConvertFixMessageToFixObject_ThrowsException_ForUnknownMessage()
+        {
+            string message = "8=FIXT1.1\u00019=28\u000135=Z\u000149=Client\u000156=Bank\u000134=1\u000110=253\u0001";
+
+            new FixParser().Invoking(fp => fp.ConvertFixMessageToFixObject(message))
+                .ShouldThrow<ArgumentException>()
+                .WithMessage("Cannot parse FIX message of type: Z");
+        }
+
+        // Add tests for logout, heartbeat, and parse failure
+
         #endregion
 
         #region ConvertFixObjectToFixMessage tests

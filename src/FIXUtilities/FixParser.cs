@@ -91,8 +91,7 @@
 
                 default:
                 {
-                     //TODO: Throw parse exception
-                     return null;
+                     throw new ArgumentException("Cannot parse FIX message of type: " + messageType);
                 }
             }
         }
