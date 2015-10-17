@@ -97,11 +97,11 @@
 
             BaseMessage result = new FixParser().ConvertFixMessageToFixObject(message);
 
-            result.Should().BeOfType<QuoteRequest>();
-            result.As<QuoteRequest>().SenderCompID.Should().Be("Client");
-            result.As<QuoteRequest>().TargetCompID.Should().Be("Bank");
-            result.As<QuoteRequest>().QuoteReqID.Should().Be("rfq712");
-            result.As<QuoteRequest>().Symbol.Should().Be("USDJPY");
+            result.Should().BeOfType<QuoteRequestMessage>();
+            result.As<QuoteRequestMessage>().SenderCompID.Should().Be("Client");
+            result.As<QuoteRequestMessage>().TargetCompID.Should().Be("Bank");
+            result.As<QuoteRequestMessage>().QuoteReqID.Should().Be("rfq712");
+            result.As<QuoteRequestMessage>().Symbol.Should().Be("USDJPY");
         }
 
         [Fact]
@@ -184,7 +184,7 @@
         [Fact]
         public void ConvertFixObjectToFixMessage_ReturnsCorrectString_ForTestRequestMessage()
         {
-            var messageObject = new TestRequest("Client", "Bank", 7, "Attempt1");
+            var messageObject = new TestRequestMessage("Client", "Bank", 7, "Attempt1");
 
             string result = new FixParser().ConvertFixObjectToFixMessage(messageObject);
 
@@ -196,7 +196,7 @@
         [Fact]
         public void ConvertFixObjectToFixMessage_ReturnsCorrectString_ForQuoteMessage()
         {
-            var messageObject = new Quote("Client", "Bank", 7, "rfq712", "q712", "USDJPY", 119.55);
+            var messageObject = new QuoteMessage("Client", "Bank", 7, "rfq712", "q712", "USDJPY", 119.55);
 
             string result = new FixParser().ConvertFixObjectToFixMessage(messageObject);
 
@@ -210,7 +210,7 @@
         {
             // There is no converter for the QuoteRequest message because only
             // the client sends it; the server has no need to generate it.
-            var messageObject = new QuoteRequest("Client", "Bank", 6, "rfq712", "USDJPY");
+            var messageObject = new QuoteRequestMessage("Client", "Bank", 6, "rfq712", "USDJPY");
 
             new FixParser().Invoking(fp => fp.ConvertFixObjectToFixMessage(messageObject))
                 .ShouldThrow<ArgumentException>()

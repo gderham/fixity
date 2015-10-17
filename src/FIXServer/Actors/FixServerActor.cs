@@ -222,7 +222,7 @@
                 BecomeShutDown();
             });
 
-            Receive<QuoteRequest>(message =>
+            Receive<QuoteRequestMessage>(message =>
             {
                 if (_instrumentOfferRates != null && 
                     _instrumentOfferRates.ContainsKey(message.Symbol))
@@ -231,7 +231,7 @@
 
                     string quoteID = "Quote" + _outboundSequenceNumber;
 
-                    var quote = new Quote(_serverCompID, _clientCompID,
+                    var quote = new QuoteMessage(_serverCompID, _clientCompID,
                         _outboundSequenceNumber++, message.QuoteReqID, quoteID,
                         message.Symbol, _instrumentOfferRates[message.Symbol]);
 
@@ -272,7 +272,7 @@
                     _log.Debug("Heartbeat message has not been received from client.");
                     _log.Debug("Sending TestRequest to client.");
                     
-                    var testRequest = new TestRequest(_serverCompID, _clientCompID,
+                    var testRequest = new TestRequestMessage(_serverCompID, _clientCompID,
                         _outboundSequenceNumber++, "1");
                     _fixInterpreterActor.Tell(testRequest);
                     // We expect to receive a heartbeat with matching TestReqID

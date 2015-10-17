@@ -4,9 +4,9 @@
     /// QuoteRequest message R (for a single instrument).
     /// http://www.onixs.biz/fix-dictionary/4.3/msgType_R_82.html
     /// </summary>
-    public class QuoteRequest : BaseMessage
+    public class QuoteRequestMessage : BaseMessage
     {
-        public QuoteRequest(string senderCompID, string targetCompID,
+        public QuoteRequestMessage(string senderCompID, string targetCompID,
             int messageSequenceNumber, string quoteReqID, string symbol) :
             base(senderCompID, targetCompID, messageSequenceNumber)
         {

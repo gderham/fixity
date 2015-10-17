@@ -4,9 +4,9 @@
     /// Test Request message 1.
     /// http://www.onixs.biz/fix-dictionary/4.3/msgType_1_1.html
     /// </summary>
-    public class TestRequest : BaseMessage
+    public class TestRequestMessage : BaseMessage
     {
-        public TestRequest(string senderCompID, string targetCompID,
+        public TestRequestMessage(string senderCompID, string targetCompID,
             int messageSequenceNumber, string testReqID) :
             base(senderCompID, targetCompID, messageSequenceNumber)
         {

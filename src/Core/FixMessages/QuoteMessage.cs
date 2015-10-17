@@ -4,9 +4,9 @@
     /// Quote message S.
     /// http://www.onixs.biz/fix-dictionary/4.3/msgType_S_83.html
     /// </summary>
-    public class Quote : BaseMessage
+    public class QuoteMessage : BaseMessage
     {
-        public Quote(string senderCompID, string targetCompID,
+        public QuoteMessage(string senderCompID, string targetCompID,
             int messageSequenceNumber, string quoteReqID, string quoteID,
             string symbol, double offerPx) :
             base(senderCompID, targetCompID, messageSequenceNumber)

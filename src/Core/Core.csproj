@@ -55,9 +55,9 @@
     <Compile Include="FixMessages\HeartbeatMessage.cs" />
     <Compile Include="FixMessages\LogonMessage.cs" />
     <Compile Include="FixMessages\LogoutMessage.cs" />
-    <Compile Include="FixMessages\Quote.cs" />
-    <Compile Include="FixMessages\QuoteRequest.cs" />
-    <Compile Include="FixMessages\TestRequest.cs" />
+    <Compile Include="FixMessages\QuoteMessage.cs" />
+    <Compile Include="FixMessages\QuoteRequestMessage.cs" />
+    <Compile Include="FixMessages\TestRequestMessage.cs" />
     <Compile Include="FixParser.cs" />
     <Compile Include="MessageInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

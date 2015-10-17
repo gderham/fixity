@@ -110,7 +110,7 @@
 
             // 4. Wait for the server to notice the lack of heartbeat and
             // send a TestRequest
-            _fixInterpreterActor.FishForMessage<TestRequest>(_ => true);
+            _fixInterpreterActor.FishForMessage<TestRequestMessage>(_ => true);
 
             // 6. The client doesn't respond so the server shuts down the connection
             _tcpServerActor.FishForMessage<TcpServerActor.Shutdown>(_ => true);
@@ -154,10 +154,10 @@
             _fixInterpreterActor.FishForMessage<LogonMessage>(_=>true);
 
             // 4. Client requests quote
-            _fixInterpreterActor.Send(_fixServerActor, new QuoteRequest("A", "B", 1, "Quote1", "USDJPY"));
+            _fixInterpreterActor.Send(_fixServerActor, new QuoteRequestMessage("A", "B", 1, "Quote1", "USDJPY"));
 
             // 5. FixServer returns the corresponding quote
-            _fixInterpreterActor.FishForMessage<Quote>(m => m.QuoteReqID == "Quote1");
+            _fixInterpreterActor.FishForMessage<QuoteMessage>(m => m.QuoteReqID == "Quote1");
         }
 
         public void FixServer_SendsResendRequest_IfGapInClientMessageSequence()

@@ -86,7 +86,7 @@
                     string quoteReqID = fixFields[QUOTEREQID_FIELD];
                     string symbol = fixFields[SYMBOL_FIELD];
 
-                    return new QuoteRequest(senderCompID, targetCompID, messageSequenceNumber,
+                    return new QuoteRequestMessage(senderCompID, targetCompID, messageSequenceNumber,
                         quoteReqID, symbol);
                 }
 
@@ -123,18 +123,18 @@
             {
                 fixFields[MESSAGETYPE_FIELD] = LOGOUT_MESSAGE;
             }
-            else if (message is Quote)
+            else if (message is QuoteMessage)
             {
-                var msg = (Quote)message;
+                var msg = (QuoteMessage)message;
                 fixFields[MESSAGETYPE_FIELD] = QUOTE_MESSAGE;
                 fixFields[QUOTEREQID_FIELD] = msg.QuoteReqID;
                 fixFields[QUOTEID_FIELD] = msg.QuoteID;
                 fixFields[SYMBOL_FIELD] = msg.Symbol;
                 fixFields[OFFERPX_FIELD] = string.Format("{0:0.0000}", msg.OfferPx);
             }
-            else if (message is TestRequest)
+            else if (message is TestRequestMessage)
             {
-                var msg = (TestRequest)message;
+                var msg = (TestRequestMessage)message;
                 fixFields[MESSAGETYPE_FIELD] = TESTREQUEST_MESSAGE;
                 fixFields[TESTREQID_FIELD] = msg.TestReqID;
             }
