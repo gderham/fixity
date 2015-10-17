@@ -28,7 +28,6 @@
         //   10=21 (sum of bytes up to that preceding the checksum mod 256)
 
         //TODO: Move to separate class - with raw/fix format in same object
-        private readonly string _logonString1WithoutChecksum;
         private readonly string _logonMessage1;
         private readonly string _logonMessage1WithoutChecksum;
 
@@ -36,11 +35,9 @@
 
         public FixParserTests()
         {
-            //TODO: Set the BodyLength (9) correctly
-            _logonString1WithoutChecksum = "8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|108=30|";
-
             _logonMessage1 =
                 SetFIXDelimiter("8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|108=30|10=80|");
+
             _logonMessage1WithoutChecksum =
                 SetFIXDelimiter("8=FIXT1.1|9=100|35=A|49=SomeClient|56=SomeFacility|34=1|108=30|");
 
