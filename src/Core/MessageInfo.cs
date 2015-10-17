@@ -3,8 +3,8 @@
     using System.Collections.Generic;
 
     /// <summary>
-    /// Parses whole messages out of a text stream, returns them as 
-    /// an ordered list, and the remaining text (a partial message).
+    /// An ordered list of messages received from a stream, plus the remaining
+    /// text.
     /// </summary>
     public class MessageInfo
     {

@@ -65,7 +65,7 @@
         #endregion
 
         /// <summary>
-        /// The name of this FixServer is the FIX world.
+        /// The name of this FixServer.
         /// </summary>
         private readonly string _serverCompID = "FIXTEST";
 
@@ -80,6 +80,9 @@
         /// </summary>
         private TimeSpan _heartbeatInterval;
 
+        /// <summary>
+        /// Cancels all scheduled heartbeats.
+        /// </summary>
         private ICancelable _heartbeatCanceller;
 
         private DateTime _lastHeartbeatArrivalTime;
@@ -96,6 +99,9 @@
         /// </summary>
         private TimeSpan _adminInterval;
 
+        /// <summary>
+        /// Cancels the scheduled admin function.
+        /// </summary>
         private ICancelable _adminCanceller;
 
         /// <summary>
@@ -103,6 +109,10 @@
         /// </summary>
         private ICancelable _clientLogoutWaitCanceller;
 
+        /// <summary>
+        /// Cancels the task that waits for a client Heartbeat in response
+        /// to the server Test Request.
+        /// </summary>
         private ICancelable _testRequestCanceller;
 
         /// <summary>

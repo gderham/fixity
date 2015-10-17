@@ -15,11 +15,13 @@
     /// </summary>
     public class FixInterpreterTests : TestKit
     {
+        /// <summary>
+        /// An unrealistic Fix parser just for testing.
+        /// </summary>
         class FakeFixParser : IFixParser
         {
             public BaseMessage ConvertFixMessageToFixObject(string text)
             {
-                // Just convert all messages into Heartbeats for this test.
                 return new HeartbeatMessage("Sender", "Target", 0);
             }
 

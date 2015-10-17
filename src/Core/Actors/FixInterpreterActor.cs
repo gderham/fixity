@@ -45,6 +45,11 @@
             Processing();
         }
 
+        #region States
+
+        /// <summary>
+        /// Main processing state.
+        /// </summary>
         public void Processing()
         {
             Receive<SetClient>(message =>
@@ -78,8 +83,9 @@
             {
                 ConvertAndSendMessage(message);
             });
-
         }
+
+        #endregion
 
         private void ConvertAndSendMessage(BaseMessage message)
         {

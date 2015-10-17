@@ -18,7 +18,7 @@
         private TestProbe _tcpServerActor;
         private TestProbe _fixInterpreterActor;
 
-        private TimeSpan _heartbeatInterval = TimeSpan.FromMilliseconds(20);
+        private TimeSpan _heartbeatInterval = TimeSpan.FromMilliseconds(20); // Low for testing
 
         public FixServerActorTests()
         {
@@ -160,17 +160,8 @@
             _fixInterpreterActor.FishForMessage<QuoteMessage>(m => m.QuoteReqID == "Quote1");
         }
 
-        public void FixServer_SendsResendRequest_IfGapInClientMessageSequence()
-        {
-
-
-
-        }
-
-        // More tests
-        // 2. Connect, logon, heartbeat not received
-        // 3. Message received with incorrect seq number - log error for now
-        // 4. Interpreter tests
-        // 5. TcpServerActor tests - would need to swap out the actual TcpListener/client for an interface
+        // More tests:
+        // 1. Client message received with incorrect seq number - server sends resend request.
+        // 2. TcpServerActor tests - easier if the TcpListener/client is swapped out for an interface
     }
 }

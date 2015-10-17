@@ -27,10 +27,8 @@
         //  Checksum
         //   10=21 (sum of bytes up to that preceding the checksum mod 256)
 
-        //TODO: Move to separate class - with raw/fix format in same object
         private readonly string _logonMessage1;
         private readonly string _logonMessage1WithoutChecksum;
-
         private readonly string _partialMessage;
 
         public FixParserTests()

@@ -8,7 +8,7 @@
     using Core;
 
     /// <summary>
-    /// An ersatz FIX server for use in testing.
+    /// A FIX server.
     /// Handles connection, logon, heartbeating and canned responses
     /// to requests from a FIX client.
     /// </summary>
@@ -43,8 +43,6 @@
                 fixInterpreterCreator, prices));
             _fixServerActor = _actorSystem.ActorOf(fixServerProps, "FixServer");
             
-            //actorSystem.AwaitTermination();
-
         }
 
         /// <summary>
@@ -62,6 +60,7 @@
         public void Stop()
         {
             _fixServerActor.Tell(new Actors.FixServerActor.Shutdown());
+            _actorSystem.AwaitTermination();
         }
         
     }
