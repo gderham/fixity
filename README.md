@@ -25,7 +25,7 @@ Platform: Windows / .NET 4.5
 Dependencies (retrieved from NuGet):
 
  * Akka.NET 1.0.4
- * XUnit 2.1.0
+ * xUnit.net 2.1.0
  * Fluent Assertions 4.0.0
  * log4net 1.2.13
 
@@ -40,25 +40,25 @@ Either:
 Instrument prices used for quoting are passed as a dictionary of Symbol->Price into the TcpServerActor.
 
 ### Interacting with the FIX server ###
-1. Connect to the FixServer on port 9700 using a TCP client.
-2. Log on to the FixServer by sending a Logon message:
+1. Connect to the FixServer on port 9700 (default) using a TCP client.
+2. Log on by sending a Logon message:
 `8=FIXT1.1\x019=35\x0135=A\x0149=Client\x0156=Bank\x0134=1\x01108=30\x0110=70\x01`
-3. Send regular heartbeat messages e.g. `8=FIXT1.1\x019=28\x0135=0\x0149=Client\x0156=Bank\x0134=1\x0110=253\x01`
+3. Send a heartbeat message: `8=FIXT1.1\x019=28\x0135=0\x0149=Client\x0156=Bank\x0134=1\x0110=253\x01`
 4. Request a quote: `8=FIXT1.1\x019=71\x0135=R\x0149=Client\x0156=Bank\x0134=7\x01131=rfq712\x0155=USDJPY\x0110=171\x01`
 5. Logout: `8=FIXT1.1\x019=28\x0135=5\x0149=Client\x0156=Bank\x0134=1\x0110=2\x01`
 
 ### Notes ###
 1. Separation of states from transitions aids code legibility
-  * E.g. State methods such as `FixServerActor.LoggedOn()` contain *only* Receive methods, any change of state is performed by a transition method e.g. `FixServerActor.BecomeLoggedOn()`.
+  * E.g. state methods such as `FixServerActor.LoggedOn()` contain Receive methods *only*, any change of state is performed by a transition method e.g. `FixServerActor.BecomeLoggedOn()`.
 2. Using constructor injection to pass an actor reference into another actor facilitates unit testing and loose coupling. But it means the parent-child relationship isn't formed - which may or may not be what is required. To enable full control, injecting a `Func<IActorRefFactory, IActorRef>` allows the parent actor constructor to instantiate the child actor using its Context, or the calling code (e.g. a unit test) can pass in a function that uses the ActorSystem.
 3. IgnoreMessages doesn't affect messages already in an actor's mailbox - only those arriving afterwards - this means I tend to use `FishForMessage()` assertions where I'd rather use `ExpectMsg()`.
 
-### Improvements to do ###
+### Improvements (to do) ###
 1. Reduce size of FixServerActor by splitting logic into separate child actors:
-  1.1. HeartbeatActor - sends heartbeats and handles loss of client heartbeat.
-  1.2. MessageSequenceActor - checks incoming messages are contiguous and handles resend requests.
-  1.3. FixSessionActor - allow multiple simultaneous client connections - the FixServer creates a new FixSessionActor per client.
-  1.4. QuotingActor - handle all quoting (subscribing to source rather than config).
+  1. HeartbeatActor - sends heartbeats and handles loss of client heartbeat.
+  2. MessageSequenceActor - checks incoming messages are contiguous and handles resend requests.
+  3. FixSessionActor - allow multiple simultaneous client connections - the FixServer creates a new FixSessionActor per client.
+  4. QuotingActor - handle all quoting (subscribing to source rather than config).
 2. Validation of messages (check checksum).
 3. Replace the TcpServerActor with Akka.IO.
 4. Use the FSM base actor - should simplify testing by setting actor state explicitly rather than by messages causing state transitions.
