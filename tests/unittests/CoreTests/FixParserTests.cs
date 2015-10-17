@@ -212,7 +212,7 @@
 
             new FixParser().Invoking(fp => fp.ConvertFixObjectToFixMessage(messageObject))
                 .ShouldThrow<ArgumentException>()
-                .WithMessage("Unable to convert Fixity.Core.FixMessages.QuoteRequest to FIX message.");
+                .WithMessage("Unable to convert Fixity.Core.FixMessages.QuoteRequestMessage to FIX message.");
         }
 
         #endregion
