@@ -28,12 +28,14 @@
                 { "USDJPY", 119.75 }
             };
 
+            var fixParser = new FixParser();
+
             var tcpServerProps = Props.Create(() => new TcpServerActor(port,
                 FixParser.ExtractFixMessages));
             Func<IActorRefFactory, IActorRef> tcpServerCreator =
                 (context) => context.ActorOf(tcpServerProps, "TcpServer");
 
-            var fixInterpreterProps = Props.Create(() => new FixInterpreterActor());
+            var fixInterpreterProps = Props.Create(() => new FixInterpreterActor(fixParser));
             Func<IActorRefFactory, IActorRef> fixInterpreterCreator =
                 (context) => context.ActorOf(fixInterpreterProps, "FixInterpreter");
 

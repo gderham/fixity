@@ -39,10 +39,11 @@
 
         private IActorRef _client;
         private IActorRef _server;
-        private FixParser _parser = new FixParser();
+        private IFixParser _parser;
 
-        public FixInterpreterActor()
+        public FixInterpreterActor(IFixParser parser)
         {
+            _parser = parser;
             Processing();
         }
 

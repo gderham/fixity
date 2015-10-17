@@ -11,7 +11,7 @@
     /// <summary>
     /// Converts text FIX messages to/from a subclass of BaseMessage.
     /// </summary>
-    public class FixParser
+    public class FixParser : IFixParser
     {
         /// <summary>
         /// Splits FIX text into field=value pairs.
